@@ -2,13 +2,23 @@ import React, { useState, useEffect, useMemo } from 'react';
 import './App.css';
 import axios from 'axios';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from './components/ui/dialog'; // o '@/components/ui/dialog'
+
+
+
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
 import { Badge } from './components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
 import { Textarea } from './components/ui/textarea';
 import { toast } from 'sonner';
@@ -17,6 +27,14 @@ import {
   CheckCircle, TrendingUp, ThumbsUp, ThumbsDown, Settings2, UserPlus, Link as LinkIcon, AlertTriangle
 } from 'lucide-react';
 import TrashView from './components/requests/TrashView';
+import RequestsView from './components/requests/RequestsView';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from './components/ui/card';
 
 
 /* ===========================
@@ -590,466 +608,40 @@ function App() {
 
           {/* Requests Tab */}
           <TabsContent value="requests" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Solicitudes de Automatización</h2>
-              <Dialog open={requestDialog} onOpenChange={setRequestDialog}>
-                <DialogTrigger asChild>
-                  <Button className="flex items-center space-x-2">
-                    <Plus className="h-4 w-4" />
-                    <span>Nueva Solicitud</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Crear Nueva Solicitud</DialogTitle>
-                    <DialogDescription>
-                      Completa los detalles de tu solicitud de automatización
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={createRequest} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="title">Título</Label>
-                      <Input
-                        id="title"
-                        value={newRequest.title}
-                        onChange={(e) => setNewRequest({ ...newRequest, title: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Descripción</Label>
-                      <Textarea
-                        id="description"
-                        value={newRequest.description}
-                        onChange={(e) => setNewRequest({ ...newRequest, description: e.target.value })}
-                        required
-                        rows={3}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Prioridad</Label>
-                        <Select
-                          value={newRequest.priority}
-                          onValueChange={(value) => setNewRequest({ ...newRequest, priority: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Alta">Alta</SelectItem>
-                            <SelectItem value="Media">Media</SelectItem>
-                            <SelectItem value="Baja">Baja</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Tipo de Solicitud</Label>
-                        <Select
-                          value={newRequest.type}
-                          onValueChange={(value) => setNewRequest({ ...newRequest, type: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Soporte">Soporte</SelectItem>
-                            <SelectItem value="Mejora">Mejora</SelectItem>
-                            <SelectItem value="Desarrollo">Desarrollo</SelectItem>
-                            <SelectItem value="Capacitación">Capacitación</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Canal</Label>
-                        <Select
-                          value={newRequest.channel}
-                          onValueChange={(value) => setNewRequest({ ...newRequest, channel: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Sistema">Sistema</SelectItem>
-                            <SelectItem value="Correo">Correo</SelectItem>
-                            <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    {user?.role === 'admin' && (
-                      <>
-                        <div className="border-t my-2" />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Nivel</Label>
-                            <Select
-                              value={newRequest.level}
-                              onValueChange={(v) => setNewRequest({ ...newRequest, level: v })}
-                            >
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="1">1</SelectItem>
-                                <SelectItem value="2">2</SelectItem>
-                                <SelectItem value="3">3</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Técnico (opcional)</Label>
-                            <Select
-                              value={newRequest.assigned_to}
-                              onValueChange={(v) => setNewRequest({ ...newRequest, assigned_to: v })}
-                            >
-                              <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                              <SelectContent>
-                                {users
-                                  .filter(u => u.role === 'support' || u.role === 'admin')
-                                  .map(u => <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Horas estimadas</Label>
-                            <Input
-                              type="number" min="0" step="0.5"
-                              value={newRequest.estimated_hours}
-                              onChange={(e) => setNewRequest({ ...newRequest, estimated_hours: e.target.value })}
-                              placeholder="Ej: 4"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Fecha compromiso (opcional)</Label>
-                            <Input
-                              type="datetime-local"
-                              value={newRequest.estimated_due}
-                              onChange={(e) => setNewRequest({ ...newRequest, estimated_due: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-
-                    <Button type="submit" className="w-full">Crear Solicitud</Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {/* Filtros */}
-            <div className="bg-white border rounded-lg p-4 grid grid-cols-1 md:grid-cols-6 gap-3">
-              <div className="md:col-span-2">
-                <Label className="text-sm">Buscar</Label>
-                <Input
-                  placeholder="Título o descripción..."
-                  value={filters.q}
-                  onChange={(e) => { setFilters({ ...filters, q: e.target.value }); setPage(1); }}
-                />
-              </div>
-
-              <div>
-                <Label className="text-sm">Estado</Label>
-                <Select
-                  value={filters.status}
-                  onValueChange={(value) => { setFilters({ ...filters, status: value }); setPage(1); }}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="Pendiente">Pendiente</SelectItem>
-                    <SelectItem value="En progreso">En progreso</SelectItem>
-                    <SelectItem value="En revisión">En revisión</SelectItem>
-                    <SelectItem value="Finalizada">Finalizada</SelectItem>
-                    <SelectItem value="Rechazada">Rechazada</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="text-sm">Departamento</Label>
-                <Select
-                  value={filters.department}
-                  onValueChange={(value) => { setFilters({ ...filters, department: value }); setPage(1); }}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {departments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="text-sm">Tipo</Label>
-                <Select
-                  value={filters.type}
-                  onValueChange={(value) => { setFilters({ ...filters, type: value }); setPage(1); }}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="Soporte">Soporte</SelectItem>
-                    <SelectItem value="Mejora">Mejora</SelectItem>
-                    <SelectItem value="Desarrollo">Desarrollo</SelectItem>
-                    <SelectItem value="Capacitación">Capacitación</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="text-sm">Nivel</Label>
-                <Select
-                  value={filters.level}
-                  onValueChange={(value) => { setFilters({ ...filters, level: value }); setPage(1); }}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="1">1</SelectItem>
-                    <SelectItem value="2">2</SelectItem>
-                    <SelectItem value="3">3</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="text-sm">Canal</Label>
-                <Select
-                  value={filters.channel}
-                  onValueChange={(value) => { setFilters({ ...filters, channel: value }); setPage(1); }}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="Sistema">Sistema</SelectItem>
-                    <SelectItem value="Correo">Correo</SelectItem>
-                    <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="md:col-span-2">
-                <Label className="text-sm">Orden</Label>
-                <Select
-                  value={filters.sort}
-                  onValueChange={(value) => { setFilters({ ...filters, sort: value }); setPage(1); }}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="-created_at">Creación: más recientes</SelectItem>
-                    <SelectItem value="created_at">Creación: más antiguos</SelectItem>
-                    <SelectItem value="-requested_at">Solicitada: más recientes</SelectItem>
-                    <SelectItem value="requested_at">Solicitada: más antiguas</SelectItem>
-                    <SelectItem value="status">Estado (A→Z)</SelectItem>
-                    <SelectItem value="-status">Estado (Z→A)</SelectItem>
-                    <SelectItem value="department">Depto (A→Z)</SelectItem>
-                    <SelectItem value="-department">Depto (Z→A)</SelectItem>
-                    <SelectItem value="priority">Prioridad (A→Z)</SelectItem>
-                    <SelectItem value="-priority">Prioridad (Z→A)</SelectItem>
-                    <SelectItem value="level">Nivel (1→3)</SelectItem>
-                    <SelectItem value="-level">Nivel (3→1)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Lista de solicitudes */}
-            <div className="grid gap-4">
-              {requests.map((request) => (
-                <Card key={request.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{request.title}</CardTitle>
-                        <CardDescription className="flex flex-wrap items-center gap-2 mt-2">
-                          <span>{request.requester_name}</span>
-                          <span>•</span>
-                          <span>{request.department}</span>
-                          <span>•</span>
-                          <span>{new Date(request.created_at).toLocaleDateString()}</span>
-                          {request.level && (
-                            <>
-                              <span>•</span>
-                              <span className="font-medium">Nivel:</span> {request.level}
-                            </>
-                          )}
-                          <span>•</span>
-                          <span className="font-medium">Tipo:</span> {request.type}
-                          <span>•</span>
-                          <span className="font-medium">Canal:</span> {request.channel}
-                          {request.assigned_by_name && (
-                            <>
-                              <span>•</span>
-                              <span className="font-medium">Asignado por:</span> {request.assigned_by_name}
-                            </>
-                          )}
-                          {request.review_evidence?.url && (
-                            <>
-                              <span>•</span>
-                              <a href={request.review_evidence.url} target="_blank" rel="noreferrer" className="underline inline-flex items-center gap-1">
-                                <LinkIcon className="h-3 w-3" /> Evidencia
-                              </a>
-                            </>
-                          )}
-                          {request.status === 'Rechazada' && request.rejection_reason && (
-                            <>
-                              <span>•</span>
-                              <span className="inline-flex items-center gap-1 text-red-600">
-                                <AlertTriangle className="h-3 w-3" /> {request.rejection_reason}
-                              </span>
-                            </>
-                          )}
-                        </CardDescription>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={getPriorityColor(request.priority)}>
-                          {request.priority}
-                        </Badge>
-                        <Badge className={getStatusColor(request.status)}>
-                          {request.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-600 mb-4">{request.description}</p>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div className="text-sm text-gray-500">
-                        {request.assigned_to_name && (
-                          <>
-                            <span className="font-medium">Asignado a:</span> {request.assigned_to_name}
-                            <span className="mx-2">•</span>
-                          </>
-                        )}
-                        {request.estimated_hours && (
-                          <>
-                            <span className="font-medium">Estimado:</span> {request.estimated_hours} h
-                            <span className="mx-2">•</span>
-                          </>
-                        )}
-                        {request.estimated_due && (
-                          <>
-                            <span className="font-medium">Compromiso:</span> {new Date(request.estimated_due).toLocaleDateString()}
-                          </>
-                        )}
-                      </div>
-
-                      {/* Acciones */}
-                      <div className="flex flex-wrap gap-2">
-                        {/* Admin: Clasificar / Asignar */}
-                        {user?.role === 'admin' && (
-                          <>
-                            <Button size="sm" variant="outline" onClick={() => {
-                              setClassifyDialogFor(request.id);
-                              setClassifyData({ level: String(request.level || '1'), priority: request.priority || 'Media' });
-                            }}>
-                              <Settings2 className="h-4 w-4 mr-2" /> Clasificar
-                            </Button>
-
-                            <Button size="sm" variant="outline" onClick={() => {
-                              setAssignDialogFor(request.id);
-                              setAssignData({
-                                assigned_to: request.assigned_to || '',
-                                estimated_hours: request.estimated_hours || '',
-                                estimated_due: request.estimated_due ? new Date(request.estimated_due).toISOString().slice(0, 16) : ''
-                              });
-                            }}>
-                              <UserPlus className="h-4 w-4 mr-2" /> Asignar
-                            </Button>
-                          </>
-                        )}
-
-                        {(user?.role === 'support' || user?.role === 'admin') && request.status === 'Pendiente' && (
-                          <>
-                            <Button size="sm" onClick={() => takeRequest(request.id)}>Tomar</Button>
-                            <Button size="sm" variant="destructive" onClick={() => rejectRequest(request.id)}>Rechazar</Button>
-                          </>
-                        )}
-
-                        {(user?.role === 'support' || user?.role === 'admin') && request.status === 'En progreso' && (
-                          <Button size="sm" onClick={() => canSendReview(request) ? sendToReview(request.id) : toast.error('No tienes permisos para enviar a revisión.')}>
-                            Enviar a revisión
-                          </Button>
-                        )}
-
-                        {(user?.role === 'support' || user?.role === 'admin') && request.status === 'En revisión' && (
-                          <>
-                            <Button size="sm" variant="outline" onClick={() => backToProgress(request.id)}>Devolver a progreso</Button>
-                            <Button size="sm" onClick={() => finishRequest(request.id)}>Finalizar</Button>
-                          </>
-                        )}
-
-                        {/* Feedback del solicitante */}
-                        {request.status === 'Finalizada' && !request.feedback && user?.id === request.requester_id && (
-                          <Button size="sm" variant="outline" onClick={() => setFeedbackDialogFor(request.id)}>
-                            Valorar
-                          </Button>
-                        )}
-                        {request.status === 'Finalizada' && request.feedback && (
-                          <div className="flex items-center text-sm text-gray-600">
-                            {request.feedback.rating === 'up' ? <ThumbsUp className="h-4 w-4 mr-1" /> : <ThumbsDown className="h-4 w-4 mr-1" />}
-                            <span>Feedback enviado</span>
-                          </div>
-                        )}
-                        {user?.role === 'admin' && (
-                <Button size="sm" variant="destructive" onClick={() => deleteRequest(request.id)}>
-                  Eliminar
-                 </Button>
-                  )}
-
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {requests.length === 0 && (
-                <Card>
-                  <CardContent className="py-8 text-center text-gray-500">
-                    No hay solicitudes que coincidan con el filtro.
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            {/* Paginación */}
-            <div className="mt-2 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div className="text-sm text-gray-600">
-                Mostrando <span className="font-medium">{pageInfo.from}</span>–<span className="font-medium">{pageInfo.to}</span> de <span className="font-medium">{total}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm mr-2">Por página</Label>
-                <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(parseInt(v, 10)); setPage(1); }}>
-                  <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="30">30</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                    Anterior
-                  </Button>
-                  <span className="text-sm text-gray-700">
-                    Página <span className="font-medium">{page}</span> / {totalPages}
-                  </span>
-                  <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-                    Siguiente
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <RequestsView
+              user={user}
+              users={users}
+              requests={requests}
+              filters={filters}
+              setFilters={setFilters}
+              departments={departments}
+              requestDialog={requestDialog}
+              setRequestDialog={setRequestDialog}
+              newRequest={newRequest}
+              setNewRequest={setNewRequest}
+              createRequest={createRequest}
+              deleteRequest={deleteRequest}
+              page={page}
+              setPage={setPage}
+              pageSize={pageSize}
+              setPageSize={setPageSize}
+              total={total}
+              totalPages={totalPages}
+              pageInfo={pageInfo}
+              setClassifyDialogFor={setClassifyDialogFor}
+              setClassifyData={setClassifyData}
+              setAssignDialogFor={setAssignDialogFor}
+              setAssignData={setAssignData}
+              setFeedbackDialogFor={setFeedbackDialogFor}
+              setFeedbackData={setFeedbackData}
+              takeRequest={takeRequest}
+              rejectRequest={rejectRequest}
+              sendToReview={sendToReview}
+              backToProgress={backToProgress}
+              finishRequest={finishRequest}
+            />
           </TabsContent>
+
 
           {/* Analytics Tab */}
           {(user?.role === 'support' || user?.role === 'admin') && (
