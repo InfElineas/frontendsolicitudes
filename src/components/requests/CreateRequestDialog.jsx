@@ -1,3 +1,5 @@
+// src/components/requests/CreateRequestDialog.jsx
+
 import React from 'react';
 import {
   DialogContent,
@@ -8,7 +10,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
 const CreateRequestDialog = ({
@@ -20,6 +28,13 @@ const CreateRequestDialog = ({
 }) => {
   const isAdmin = user?.role === 'admin';
 
+  // ✅ Técnicos filtrados: soporte o admin y del depto Informática
+  const availableTechnicians = users.filter(
+    (u) =>
+      (u.role === 'support' || u.role === 'admin') &&
+      u.department === 'Informática'
+  );
+
   return (
     <DialogContent>
       <DialogHeader>
@@ -30,34 +45,42 @@ const CreateRequestDialog = ({
       </DialogHeader>
 
       <form onSubmit={createRequest} className="space-y-4">
+        {/* Título */}
         <div className="space-y-2">
           <Label htmlFor="title">Título</Label>
           <Input
             id="title"
             value={newRequest.title}
-            onChange={(e) => setNewRequest({ ...newRequest, title: e.target.value })}
+            onChange={(e) =>
+              setNewRequest({ ...newRequest, title: e.target.value })
+            }
             required
           />
         </div>
 
+        {/* Descripción */}
         <div className="space-y-2">
           <Label htmlFor="description">Descripción</Label>
           <Textarea
             id="description"
             value={newRequest.description}
-            onChange={(e) => setNewRequest({ ...newRequest, description: e.target.value })}
+            onChange={(e) =>
+              setNewRequest({ ...newRequest, description: e.target.value })
+            }
             required
             rows={3}
           />
         </div>
 
-        {/* Campos generales */}
+        {/* Campos comunes */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Prioridad</Label>
             <Select
               value={newRequest.priority}
-              onValueChange={(value) => setNewRequest({ ...newRequest, priority: value })}
+              onValueChange={(value) =>
+                setNewRequest({ ...newRequest, priority: value })
+              }
             >
               <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
               <SelectContent>
@@ -72,7 +95,9 @@ const CreateRequestDialog = ({
             <Label>Tipo</Label>
             <Select
               value={newRequest.type}
-              onValueChange={(value) => setNewRequest({ ...newRequest, type: value })}
+              onValueChange={(value) =>
+                setNewRequest({ ...newRequest, type: value })
+              }
             >
               <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
               <SelectContent>
@@ -88,7 +113,9 @@ const CreateRequestDialog = ({
             <Label>Canal</Label>
             <Select
               value={newRequest.channel}
-              onValueChange={(value) => setNewRequest({ ...newRequest, channel: value })}
+              onValueChange={(value) =>
+                setNewRequest({ ...newRequest, channel: value })
+              }
             >
               <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
               <SelectContent>
@@ -100,11 +127,12 @@ const CreateRequestDialog = ({
           </div>
         </div>
 
-        {/* Solo para admins */}
+        {/* Campos exclusivos para admin */}
         {isAdmin && (
           <>
             <div className="border-t pt-4" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
               <div className="space-y-2">
                 <Label>Nivel</Label>
                 <Select
@@ -124,17 +152,23 @@ const CreateRequestDialog = ({
                 <Label>Técnico (opcional)</Label>
                 <Select
                   value={newRequest.assigned_to}
-                  onValueChange={(v) => setNewRequest({ ...newRequest, assigned_to: v })}
+                  onValueChange={(v) =>
+                    setNewRequest({ ...newRequest, assigned_to: v })
+                  }
                 >
                   <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                   <SelectContent>
-                    {users
-                      .filter(u => u.role === 'support' || u.role === 'admin')
-                      .map(u => (
+                    {availableTechnicians.length > 0 ? (
+                      availableTechnicians.map(u => (
                         <SelectItem key={u.id} value={u.id}>
                           {u.full_name}
                         </SelectItem>
-                      ))}
+                      ))
+                    ) : (
+                      <div className="px-4 py-2 text-sm text-gray-500">
+                        Sin técnicos de Informática disponibles
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -146,7 +180,9 @@ const CreateRequestDialog = ({
                   min="0"
                   step="0.5"
                   value={newRequest.estimated_hours}
-                  onChange={(e) => setNewRequest({ ...newRequest, estimated_hours: e.target.value })}
+                  onChange={(e) =>
+                    setNewRequest({ ...newRequest, estimated_hours: e.target.value })
+                  }
                   placeholder="Ej: 4"
                 />
               </div>
@@ -156,14 +192,18 @@ const CreateRequestDialog = ({
                 <Input
                   type="datetime-local"
                   value={newRequest.estimated_due}
-                  onChange={(e) => setNewRequest({ ...newRequest, estimated_due: e.target.value })}
+                  onChange={(e) =>
+                    setNewRequest({ ...newRequest, estimated_due: e.target.value })
+                  }
                 />
               </div>
             </div>
           </>
         )}
 
-        <Button type="submit" className="w-full">Crear Solicitud</Button>
+        <Button type="submit" className="w-full">
+          Crear Solicitud
+        </Button>
       </form>
     </DialogContent>
   );

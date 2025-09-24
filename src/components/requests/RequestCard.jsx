@@ -104,35 +104,44 @@ const RequestCard = ({
 
           <div className="flex flex-wrap gap-2">
             {/* Admin: Clasificar / Asignar */}
-            {user?.role === 'admin' && (
-                <>
-                    {!request.level && (
-                    <Button size="sm" variant="outline" onClick={() => {
-                        setClassifyDialogFor(request.id);
-                        setClassifyData({
-                        level: '1',
-                        priority: request.priority || 'Media'
-                        });
-                    }}>
-                        <Settings2 className="h-4 w-4 mr-2" /> Clasificar
-                    </Button>
-                    )}
+           {user?.role === 'admin' && request.status !== 'in_progress' && (
+  <>
+    {/* Botón Clasificar */}
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => {
+        setClassifyDialogFor(request.id);
+        setClassifyData({
+          level: '1',
+          priority: request.priority || 'Media'
+        });
+      }}
+    >
+      <Settings2 className="h-4 w-4 mr-2" />
+      Clasificar
+    </Button>
 
-                    {!request.assigned_to && (
-                    <Button size="sm" variant="outline" onClick={() => {
-                        setAssignDialogFor(request.id);
-                        setAssignData({
-                        assigned_to: '',
-                        estimated_hours: '',
-                        estimated_due: ''
-                        });
-                    }}>
-                        <UserPlus className="h-4 w-4 mr-2" /> Asignar
-                    </Button>
-                    )}
-                </>
-                )}
-                
+    {/* Botón Asignar */}
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => {
+        setAssignDialogFor(request.id);
+        setAssignData({
+          assigned_to: '',
+          estimated_hours: '',
+          estimated_due: ''
+        });
+      }}
+    >
+      <UserPlus className="h-4 w-4 mr-2" />
+      Asignar
+    </Button>
+  </>
+)}
+
+
 
 
             {(user?.role === 'support' || user?.role === 'admin') && request.status === 'Pendiente' && (

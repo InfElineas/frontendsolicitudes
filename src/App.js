@@ -11,6 +11,13 @@ import {
   DialogDescription
 } from './components/ui/dialog'; // o '@/components/ui/dialog'
 
+import AnalyticsView from './components/analytics/AnalyticsView';
+import DepartmentsView from './components/departaments/DepartmentsView.jsx';
+import UsersView from './components/users/UsersView';
+import HeaderBar from './components/layouts/HeaderBar.jsx';
+import AssignDialog from './components/requests/AssignDialog';
+
+
 
 
 import { Button } from './components/ui/button';
@@ -543,31 +550,8 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <FileText className="h-8 w-8 text-indigo-600" />
-                <h1 className="text-xl font-bold text-gray-900">Sistema de Solicitudes</h1>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <User className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-700">{user?.full_name}</span>
-                <Badge variant="secondary" className="text-xs">
-                  {user?.role === 'admin' ? 'Administrador' :
-                   user?.role === 'support' ? 'Soporte' : 'Empleado'}
-                </Badge>
-              </div>
-              <Button variant="ghost" size="sm" onClick={logout}>
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <HeaderBar user={user} onLogout={logout} />
+
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -645,146 +629,17 @@ function App() {
 
           {/* Analytics Tab */}
           {(user?.role === 'support' || user?.role === 'admin') && (
-            <TabsContent value="analytics" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900">Análisis y Métricas</h2>
-                <Select value={analyticsPeriod} onValueChange={setAnalyticsPeriod}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="day">Último día</SelectItem>
-                    <SelectItem value="week">Última semana</SelectItem>
-                    <SelectItem value="month">Último mes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {analytics && (
-                <>
-                  {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total de solicitudes</CardTitle>
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{analytics.totals?.total_requests ?? 0}</div>
-                        <p className="text-xs text-muted-foreground">Acumulado</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Nuevas (&lt;24h)</CardTitle>
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{analytics.totals?.new_last_24h ?? 0}</div>
-                        <p className="text-xs text-muted-foreground">Últimas 24 horas</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Finalizadas</CardTitle>
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-green-600">{analytics.finished}</div>
-                        <p className="text-xs text-muted-foreground">Cerradas en el periodo</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Pendientes ahora</CardTitle>
-                        <Clock className="h-4 w-4 text-blue-600" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold text-blue-600">{analytics.pending_now}</div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Solicitudes asignadas</CardTitle>
-                        <UserPlus className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{analytics.totals?.assigned_total ?? 0}</div>
-                        <p className="text-xs text-muted-foreground">Actualmente</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Sin asignar</CardTitle>
-                        <Settings2 className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{analytics.totals?.unassigned_total ?? 0}</div>
-                        <p className="text-xs text-muted-foreground">Actualmente</p>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Tiempo Promedio</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{analytics.avg_cycle_hours}h</div>
-                        <p className="text-xs text-muted-foreground">Ciclo de creación → cierre</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Productividad por técnico */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Productividad por técnico</CardTitle>
-                      <CardDescription>
-                        Asignadas (acumulado), Atendidas (finalizadas en el periodo) y Pendientes (estado actual)
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {(analytics.productivity_by_tech && analytics.productivity_by_tech.length > 0) ? (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead className="text-left text-gray-600">
-                              <tr>
-                                <th className="py-2 pr-2">Técnico</th>
-                                <th className="py-2 pr-2 text-right">Asignadas</th>
-                                <th className="py-2 pr-2 text-right">Atendidas (periodo)</th>
-                                <th className="py-2 pr-2 text-right">Pendientes</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {analytics.productivity_by_tech.map((row) => (
-                                <tr key={row.user_id}>
-                                  <td className="py-2 pr-2">{row.name || 'Sin asignación'}</td>
-                                  <td className="py-2 pr-2 text-right">{row.assigned_total ?? 0}</td>
-                                  <td className="py-2 pr-2 text-right">{row.attended_period ?? 0}</td>
-                                  <td className="py-2 pr-2 text-right">{row.pending_now ?? 0}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-500">Sin datos en el periodo seleccionado.</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </>
-              )}
-            </TabsContent>
+           <TabsContent value="analytics" className="space-y-4">
+            <AnalyticsView
+              analytics={analytics}
+              analyticsPeriod={analyticsPeriod}
+              setAnalyticsPeriod={setAnalyticsPeriod}
+            />
+          </TabsContent>
           )}
 
           {/* Users Tab (Admin only) */}
-          {user?.role === 'admin' && (
+         {user?.role === 'admin' && (
             <TabsContent value="users" className="space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h2>
@@ -796,137 +651,23 @@ function App() {
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Crear Nuevo Usuario</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={createUser} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="username">Usuario</Label>
-                          <Input
-                            id="username"
-                            value={newUser.username}
-                            onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="password">Contraseña</Label>
-                          <Input
-                            id="password"
-                            type="password"
-                            value={newUser.password}
-                            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="full_name">Nombre Completo</Label>
-                        <Input
-                          id="full_name"
-                          value={newUser.full_name}
-                          onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Departamento</Label>
-                          <Select value={newUser.department} onValueChange={(value) => setNewUser({ ...newUser, department: value })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {departments.map((dept) => (
-                                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Puesto</Label>
-                          <Select value={newUser.position} onValueChange={(value) => setNewUser({ ...newUser, position: value })}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Jefe de departamento">Jefe de departamento</SelectItem>
-                              <SelectItem value="Especialista">Especialista</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Rol</Label>
-                        <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="employee">Empleado</SelectItem>
-                            <SelectItem value="support">Soporte Técnico</SelectItem>
-                            <SelectItem value="admin">Administrador</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button type="submit" className="w-full">Crear Usuario</Button>
-                    </form>
+                    {/* ...Formulario de nuevo usuario... */}
                   </DialogContent>
                 </Dialog>
               </div>
 
-              <div className="grid gap-4">
-                {users.map((u) => (
-                  <Card key={u.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold">{u.full_name}</h3>
-                          <p variant={u.role === 'admin' ? 'default' : u.role === 'support' ? 'secondary' : 'outline'}>
-                            {u.role === 'admin' ? 'Administrador' :
-                            u.role === 'support' ? 'Soporte' : 'Empleado'} 
-                          </p>
-                          <p className="text-sm text-gray-600">@{u.username}</p>
-                          <p className="text-sm text-gray-500">{u.department} • {u.position}</p>
-                        </div>
-                        
-                        <div className="flex items-center justify-between space-x-2">
-                          
-                          {user?.role === 'admin' && (
-                            <Badge variant="destructive" size="sm" onClick={() => deleteUser(u.id)}>
-                              Eliminar
-                            </Badge>
-                          )}
-                          
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <UsersView users={users} onDeleteUser={deleteUser} />
             </TabsContent>
           )}
 
           {/* Departments Tab (Admin only) */}
           {user?.role === 'admin' && (
             <TabsContent value="departments" className="space-y-4">
-              <h2 className="text-2xl font-bold text-gray-900">Departamentos</h2>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {departments.map((dept) => (
-                  <Card key={dept}>
-                    <CardHeader>
-                      <CardTitle className="text-lg">{dept}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-sm text-gray-600">
-                        <p>Usuarios activos: {users.filter(u => u.department === dept).length}</p>
-                        <p>Solicitudes: {requests.filter(r => r.department === dept).length}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <DepartmentsView
+                departments={departments}
+                users={users}
+                requests={requests}
+              />
             </TabsContent>
           )}
 
@@ -980,57 +721,21 @@ function App() {
       </Dialog>
 
       {/* === Dialog: Asignar (admin) === */}
-      <Dialog open={!!assignDialogFor} onOpenChange={(open) => !open && setAssignDialogFor(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Asignar responsable</DialogTitle>
-            <DialogDescription>Selecciona técnico y estimación</DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Técnico</Label>
-              <Select
-                value={assignData.assigned_to}
-                onValueChange={(v) => setAssignData({ ...assignData, assigned_to: v })}
-              >
-                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                <SelectContent>
-                  {users
-                    .filter((u) => u.role === 'support' || u.role === 'admin')
-                    .map((u) => (
-                      <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Horas estimadas</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.5"
-                value={assignData.estimated_hours}
-                onChange={(e) => setAssignData({ ...assignData, estimated_hours: e.target.value })}
-                placeholder="Ej: 4"
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label>Fecha compromiso (opcional)</Label>
-              <Input
-                type="datetime-local"
-                value={assignData.estimated_due}
-                onChange={(e) => setAssignData({ ...assignData, estimated_due: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setAssignDialogFor(null)}>Cancelar</Button>
-            <Button onClick={() => assignRequest(assignDialogFor, assignData.assigned_to, assignData.estimated_hours, assignData.estimated_due)}>Asignar</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AssignDialog
+  open={!!assignDialogFor}
+  onClose={() => setAssignDialogFor(null)}
+  onSubmit={() =>
+    assignRequest(
+      assignDialogFor,
+      assignData.assigned_to,
+      assignData.estimated_hours,
+      assignData.estimated_due
+    )
+  }
+  assignData={assignData}
+  setAssignData={setAssignData}
+  users={users}
+/>
 
       {/* === Dialog: Feedback (solicitante) === */}
       <Dialog open={!!feedbackDialogFor} onOpenChange={(open) => !open && setFeedbackDialogFor(null)}>

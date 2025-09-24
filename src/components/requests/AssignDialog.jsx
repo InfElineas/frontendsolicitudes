@@ -1,90 +1,103 @@
+// src/components/requests/AssignDialog.jsx
 import React from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+  DialogTitle,
+  DialogDescription,
+} from '../ui/dialog';
+
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const AssignDialog = ({
-  assignDialogFor,
-  setAssignDialogFor,
+  open,
+  onClose,
+  onSubmit,
   assignData,
   setAssignData,
-  users,
-  assignRequest
+  users = [],
 }) => {
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setAssignData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = () => {
-    assignRequest(assignDialogFor);
-    setAssignDialogFor(null);
-  };
+  // ✅ Filtrar usuarios de soporte y del departamento "Informática"
+  const supportUsers = users.filter(
+    (u) =>
+      (u.role === 'support' || u.role === 'admin') &&
+      u.department === 'Informática'
+  );
 
   return (
-    <Dialog open={!!assignDialogFor} onOpenChange={() => setAssignDialogFor(null)}>
-      <DialogContent className="max-w-md w-full">
+    <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Asignar Solicitud</DialogTitle>
+          <DialogTitle>Asignar responsable</DialogTitle>
+          <DialogDescription>
+            Solo puedes asignar a técnicos del departamento de Informática
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Usuario asignado */}
-          <div>
-            <label className="block mb-1 text-sm font-medium">Asignar a</label>
-            <select
-              name="assigned_to"
-              value={assignData.assigned_to || ''}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2 text-sm"
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Técnico</Label>
+            <Select
+              value={assignData.assigned_to}
+              onValueChange={(v) => setAssignData({ ...assignData, assigned_to: v })}
             >
-              <option value="">Selecciona un usuario</option>
-              {users
-                .filter(u => u.role === 'support')
-                .map(user => (
-                  <option key={user.id} value={user.id}>
-                    {user.name}
-                  </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar..." />
+              </SelectTrigger>
+              <SelectContent>
+                {supportUsers.length > 0 ? (
+                  supportUsers.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.full_name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="px-4 py-2 text-sm text-gray-500">Sin técnicos disponibles</div>
+                )}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Horas estimadas */}
-          <div>
-            <label className="block mb-1 text-sm font-medium">Horas estimadas</label>
-            <input
+          <div className="space-y-2">
+            <Label>Horas estimadas</Label>
+            <Input
               type="number"
-              name="estimated_hours"
-              value={assignData.estimated_hours || ''}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2 text-sm"
-              placeholder="Ej. 5"
               min="0"
+              step="0.5"
+              placeholder="Ej: 4"
+              value={assignData.estimated_hours}
+              onChange={(e) =>
+                setAssignData({ ...assignData, estimated_hours: e.target.value })
+              }
             />
           </div>
 
-          {/* Fecha estimada */}
-          <div>
-            <label className="block mb-1 text-sm font-medium">Fecha de entrega</label>
-            <input
+          <div className="space-y-2 md:col-span-2">
+            <Label>Fecha compromiso (opcional)</Label>
+            <Input
               type="datetime-local"
-              name="estimated_due"
-              value={assignData.estimated_due || ''}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2 text-sm"
+              value={assignData.estimated_due}
+              onChange={(e) =>
+                setAssignData({ ...assignData, estimated_due: e.target.value })
+              }
             />
           </div>
+        </div>
 
-          {/* Botón de acción */}
-          <div className="pt-2 flex justify-end">
-            <Button onClick={handleSubmit}>
-              Asignar
-            </Button>
-          </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={onSubmit}
+            disabled={!assignData.assigned_to}
+          >
+            Asignar
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
