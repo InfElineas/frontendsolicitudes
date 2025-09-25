@@ -651,7 +651,82 @@ function App() {
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
-                    {/* ...Formulario de nuevo usuario... */}
+                    <DialogHeader>
+                      <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={createUser} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="username">Usuario</Label>
+                          <Input
+                            id="username"
+                            value={newUser.username}
+                            onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="password">Contraseña</Label>
+                          <Input
+                            id="password"
+                            type="password"
+                            value={newUser.password}
+                            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="full_name">Nombre Completo</Label>
+                        <Input
+                          id="full_name"
+                          value={newUser.full_name}
+                          onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Departamento</Label>
+                          <Select value={newUser.department} onValueChange={(value) => setNewUser({ ...newUser, department: value })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {departments.map((dept) => (
+                                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Puesto</Label>
+                          <Select value={newUser.position} onValueChange={(value) => setNewUser({ ...newUser, position: value })}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Jefe de departamento">Jefe de departamento</SelectItem>
+                              <SelectItem value="Especialista">Especialista</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Rol</Label>
+                        <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="employee">Empleado</SelectItem>
+                            <SelectItem value="support">Soporte Técnico</SelectItem>
+                            <SelectItem value="admin">Administrador</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button type="submit" className="w-full">Crear Usuario</Button>
+                    </form>
                   </DialogContent>
                 </Dialog>
               </div>
