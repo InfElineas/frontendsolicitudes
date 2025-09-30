@@ -12,13 +12,25 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
+/**
+ * Props:
+ * - open, onOpenChange, requestId, editData, setEditData, updateRequest
+ * - saving?: boolean        (opcional; deshabilita UI mientras guarda)
+ * - typeOptions?: string[]  (opcional; si vienen, usa <select>)
+ * - channelOptions?: string[] (opcional)
+ * - departmentOptions?: string[] (opcional)
+ */
 const EditRequestDialog = ({
   open,
   onOpenChange,
   requestId,
   editData,
   setEditData,
-  updateRequest
+  updateRequest,
+  saving = false,
+  typeOptions = [],
+  channelOptions = [],
+  departmentOptions = [],
 }) => {
   if (!open) return null;
 
@@ -26,17 +38,50 @@ const EditRequestDialog = ({
     const { name, value } = e.target;
     setEditData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!requestId) return;
     updateRequest(requestId);
   };
 
+  const SelectOrInput = ({ id, name, label, value, onChange, options }) => {
+    const hasOptions = Array.isArray(options) && options.length > 0;
+    return (
+      <div>
+        <Label htmlFor={id}>{label}</Label>
+        {hasOptions ? (
+          <select
+            id={id}
+            name={name}
+            value={value ?? ''}
+            onChange={onChange}
+            disabled={saving}
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+          >
+            <option value="">— Seleccionar —</option>
+            {options.map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        ) : (
+          <Input
+            id={id}
+            name={name}
+            value={value ?? ''}
+            onChange={onChange}
+            disabled={saving}
+          />
+        )}
+      </div>
+    );
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => !saving && onOpenChange(v)}>
       <DialogContent className="max-w-lg w-full">
         <DialogHeader>
           <DialogTitle>Editar Solicitud</DialogTitle>
@@ -52,9 +97,10 @@ const EditRequestDialog = ({
             <Input
               id="title"
               name="title"
-              value={editData.title}
+              value={editData.title ?? ''}
               onChange={handleChange}
               required
+              disabled={saving}
             />
           </div>
 
@@ -64,51 +110,56 @@ const EditRequestDialog = ({
             <Textarea
               id="description"
               name="description"
-              value={editData.description}
+              value={editData.description ?? ''}
               onChange={handleChange}
               rows={4}
+              disabled={saving}
             />
           </div>
 
           {/* Tipo */}
-          <div>
-            <Label htmlFor="type">Tipo</Label>
-            <Input
-              id="type"
-              name="type"
-              value={editData.type}
-              onChange={handleChange}
-            />
-          </div>
+          <SelectOrInput
+            id="type"
+            name="type"
+            label="Tipo"
+            value={editData.type}
+            onChange={handleChange}
+            options={typeOptions}
+          />
 
           {/* Canal */}
-          <div>
-            <Label htmlFor="channel">Canal</Label>
-            <Input
-              id="channel"
-              name="channel"
-              value={editData.channel}
-              onChange={handleChange}
-            />
-          </div>
+          <SelectOrInput
+            id="channel"
+            name="channel"
+            label="Canal"
+            value={editData.channel}
+            onChange={handleChange}
+            options={channelOptions}
+          />
 
           {/* Departamento */}
-          <div>
-            <Label htmlFor="department">Departamento</Label>
-            <Input
-              id="department"
-              name="department"
-              value={editData.department}
-              onChange={handleChange}
-            />
-          </div>
+          <SelectOrInput
+            id="department"
+            name="department"
+            label="Departamento"
+            value={editData.department}
+            onChange={handleChange}
+            options={departmentOptions}
+          />
 
           {/* Acciones */}
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={saving}
+            >
               Cancelar
             </Button>
-            <Button type="submit">Guardar Cambios</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Guardando…' : 'Guardar Cambios'}
+            </Button>
           </div>
         </form>
       </DialogContent>

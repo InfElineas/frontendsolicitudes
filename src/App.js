@@ -313,8 +313,8 @@ function App() {
       }
       await api.post('/requests', payload);
       setNewRequest({
-        title:'', description:'', priority:'Media', type:'Soporte', channel:'Sistema',
-        level:'1', assigned_to:'', estimated_hours:'', estimated_due:''
+        title:'', description:'', priority:'', type:'', channel:'Sistema',
+        level:'', assigned_to:'', estimated_hours:'', estimated_due:''
       });
       setRequestDialog(false);
       setPage(1);

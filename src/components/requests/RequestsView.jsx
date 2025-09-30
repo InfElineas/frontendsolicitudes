@@ -1,14 +1,42 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
+import axios from 'axios';
 
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 import CreateRequestDialog from './CreateRequestDialog';
+import RequestDetailDialog from './RequestDetailDialog';
 import EditRequestDialog from './EditRequestDialog';
 import RequestFilters from './RequestFilters';
 import RequestCard from './RequestCard';
+
+/* --------- BASE URL robusta (Vite, CRA, global, fallback) + axios con auth --------- */
+const VITE   = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) || undefined;
+const CRA    = (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL) || undefined;
+const GLOBAL = (typeof window !== 'undefined' && window.__API_URL) || undefined;
+const GUESS  = `${window?.location?.protocol || 'http:'}//${window?.location?.hostname || 'localhost'}:8000`;
+const BASE   = (VITE || CRA || GLOBAL || GUESS).replace(/\/+$/, '');
+
+const api = axios.create({
+  baseURL: `${BASE}/api`,
+  withCredentials: true,
+});
+
+api.interceptors.request.use((config) => {
+  const stored =
+    localStorage.getItem('access_token') ||
+    sessionStorage.getItem('access_token') ||
+    localStorage.getItem('token') ||
+    sessionStorage.getItem('token');
+  if (stored) {
+    const raw = stored.trim();
+    const token = raw.startsWith('Bearer ') ? raw.slice(7) : raw;
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 const RequestsView = ({
   user,
@@ -43,54 +71,53 @@ const RequestsView = ({
   rejectRequest,
   sendToReview,
   backToProgress,
-  finishRequest
+  finishRequest,
+  
 }) => {
 
-const [editDialogFor, setEditDialogFor] = useState(null);
-const [editData, setEditData] = useState({
-  title: '',
-  description: '',
-  type: '',
-  channel: '',
-  department: ''
-});
+  const [viewDialogFor, setViewDialogFor] = useState(null);
 
-const updateRequest = async (id) => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('No hay token de autenticación.');
+  const [editDialogFor, setEditDialogFor] = useState(null);
+  const [editData, setEditData] = useState({
+    title: '',
+    description: '',
+    type: '',
+    channel: '',
+    department: ''
+  });
+  const [saving, setSaving] = useState(false);
 
-    console.log("➡️ Enviando actualización", { id, editData });
-
-    const response = await fetch(`https://backendsolicitudes.onrender.com/api/requests/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(editData),
+  // Abre modal de edición con datos precargados
+  const openEdit = (id, data) => {
+    setEditDialogFor(id);
+    setEditData({
+      title: data?.title || '',
+      description: data?.description || '',
+      type: data?.type || '',
+      channel: data?.channel || '',
+      department: data?.department || '',
     });
+  };
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text);
+  const updateRequest = async (id) => {
+    try {
+      setSaving(true);
+      await api.put(`/requests/${id}`, editData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      setEditDialogFor(null);
+
+      // Si el listado lo trae el padre, aquí no tenemos fetchRequests.
+      // Forzamos refresco visual. Si luego me pasas fetchRequests, lo uso en lugar de reload.
+      window.location.reload();
+    } catch (error) {
+      const msg = error?.response?.data?.detail || error.message;
+      console.error('❌ Error al actualizar la solicitud:', msg);
+      alert(`No se pudo actualizar la solicitud: ${msg}`);
+    } finally {
+      setSaving(false);
     }
-
-    const updatedRequest = await response.json();
-    console.log("⬅️ Respuesta del servidor", updatedRequest);
-
-    setEditDialogFor(null);
-    window.location.reload();
-  } catch (error) {
-    console.error('❌ Error al actualizar la solicitud:', error.message);
-    alert(`No se pudo actualizar la solicitud: ${error.message}`);
-  }
-};
-
-
-
-
-
+  };
 
   return (
     <div className="space-y-6">
@@ -149,6 +176,8 @@ const updateRequest = async (id) => {
               editDialogFor={editDialogFor}
               editData={editData}
               setEditData={setEditData}
+              onView={(id) => setViewDialogFor(id)}
+              onEdit={(id, data) => openEdit(id, data)}
             />
           ))
         )}
@@ -186,16 +215,27 @@ const updateRequest = async (id) => {
           </div>
         </div>
       </div>
-      {user?.role === 'admin' && (
-  <EditRequestDialog
-    open={!!editDialogFor}
-    onOpenChange={setEditDialogFor}
-    requestId={editDialogFor}
-    editData={editData}
-    setEditData={setEditData}
-    updateRequest={updateRequest}
-  />
-)}
+
+      {/* Detalle de solicitud */}
+      <RequestDetailDialog
+        open={!!viewDialogFor}
+        onOpenChange={(open) => setViewDialogFor(open ? viewDialogFor : null)}
+        requestId={viewDialogFor}
+      />
+
+      {/* Editar solicitud */}
+      <EditRequestDialog
+        open={!!editDialogFor}
+        onOpenChange={(open) => { if (!open) setEditDialogFor(null); }}
+        requestId={editDialogFor}
+        editData={editData}
+        setEditData={setEditData}
+        updateRequest={updateRequest}
+        saving={saving}
+        typeOptions={['Incidencia', 'Solicitud', 'Mejora']}
+        channelOptions={['Sistema', 'Email', 'Chat', 'Presencial']}
+        departmentOptions={departments?.map(d => d.name) || []}
+      />
 
     </div>
   );
