@@ -2,20 +2,20 @@
   command = "craco build"
   publish = "build"
 
-# 1) SPA fallback: todas las rutas al index
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# 2) Proxy al backend (evitas CORS y usar localhost por error)
+# 1) PROXY AL BACKEND (debe ir antes)
 [[redirects]]
   from = "/api/*"
   to = "https://backendsolicitudes.onrender.com/api/:splat"
   status = 200
   force = true
 
-# 3) Headers de seguridad base
+# 2) SPA FALLBACK
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# (Opcional) headers de seguridad
 [[headers]]
   for = "/*"
   [headers.values]
@@ -24,9 +24,3 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-
-# 4) Cache agresivo para assets estáticos (hash en nombre)
-[[headers]]
-  for = "/assets/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
