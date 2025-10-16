@@ -5,20 +5,27 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
-/* -------------------- BASE URL (Vite/CRA/global/fallback) -------------------- */
-const VITE   = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) || undefined;
-const CRA    = (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL) || undefined;
-const GLOBAL = (typeof window !== 'undefined' && window.__API_URL) || undefined;
-const GUESS  = `${window?.location?.protocol || 'http:'}//${window?.location?.hostname || 'localhost'}:8000`;
-const BASE   = (VITE || CRA || GLOBAL || GUESS).replace(/\/+$/, '');
+/* -------------------- BASE URL robusto (Vite/CRA + proxy Netlify) -------------------- */
+const isLocal =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-/* -------------------- Axios con credenciales y token -------------------- */
+const ENV_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ??
+  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL) ??
+  (typeof window !== 'undefined' && window.__API_URL) ??
+  (isLocal ? 'http://localhost:8000' : '');
+
+// En local usamos URL explícita; en prod usamos el proxy /api (definido en netlify.toml)
+const baseURL = isLocal ? `${ENV_URL.replace(/\/+$/, '')}/api` : '/api';
+
+/* -------------------- Axios con token (Bearer) -------------------- */
 const api = axios.create({
-  baseURL: `${BASE}/api`,
-  withCredentials: true, // si tu backend usa cookies HttpOnly
+  baseURL,
+  withCredentials: false,  // usamos Authorization, no cookies
+  timeout: 30000
 });
 
-// Inyecta Authorization: Bearer <token> si existe (ajusta las keys si usas otro nombre)
 api.interceptors.request.use((config) => {
   const stored =
     localStorage.getItem('access_token') ||
@@ -37,17 +44,17 @@ api.interceptors.request.use((config) => {
 
 /* -------------------- Helpers de UI -------------------- */
 const colorStatus = (s) => ({
-  'Pendiente':    'bg-yellow-100 text-yellow-800',
-  'En progreso':  'bg-blue-100 text-blue-800',
-  'En revisión':  'bg-purple-100 text-purple-800',
-  'Finalizada':   'bg-green-100 text-green-800',
-  'Rechazada':    'bg-red-100 text-red-800',
+  'Pendiente':   'bg-yellow-100 text-yellow-800',
+  'En progreso': 'bg-blue-100 text-blue-800',
+  'En revisión': 'bg-purple-100 text-purple-800',
+  'Finalizada':  'bg-green-100 text-green-800',
+  'Rechazada':   'bg-red-100 text-red-800',
 }[s] || 'bg-gray-100 text-gray-800');
 
 const colorPri = (p) => ({
-  'Alta':   'bg-red-100 text-red-800',
-  'Media':  'bg-yellow-100 text-yellow-800',
-  'Baja':   'bg-green-100 text-green-800',
+  'Alta':  'bg-red-100 text-red-800',
+  'Media': 'bg-yellow-100 text-yellow-800',
+  'Baja':  'bg-green-100 text-green-800',
 }[p] || 'bg-gray-100 text-gray-800');
 
 const fmt = (d) => { try { return d ? new Date(d).toLocaleString() : '-'; } catch { return d || '-'; } };
@@ -91,7 +98,7 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
   useEffect(() => {
     if (!open || !requestId) return;
 
-    // cancela request previo si existe
+    // Cancela request previo si existe
     abortRef.current?.abort?.();
     const controller = new AbortController();
     abortRef.current = controller;
