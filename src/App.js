@@ -67,12 +67,8 @@ if (!resolvedBackend) {
   console.error("BACKEND_URL no configurada para producción");
 }
 
-const BACKEND_URL = (resolvedBackend || "").replace(/\/+$/, "");
-const api = axios.create({
-  baseURL: BACKEND_URL ? `${BACKEND_URL}/api` : undefined,
-  withCredentials: false, // usas Bearer token, no cookies
-  timeout: 30000,         // Render puede tardar en despertar
-});
+const api = axios.create({ baseURL: "/api", timeout: 30000 });
+
 
 // Inyecta Bearer
 api.interceptors.request.use((config) => {
