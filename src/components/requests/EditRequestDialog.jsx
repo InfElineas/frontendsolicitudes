@@ -1,4 +1,3 @@
-// src/components/requests/EditRequestDialog.jsx
 import React from 'react';
 import {
   Dialog,
@@ -20,9 +19,21 @@ import {
   SelectValue
 } from '@/components/ui/select';
 
-// Enums unificados con Create y App.js
 const CHANNEL_OPTIONS = ['Sistema', 'Google Sheets', 'Correo Electrónico', 'WhatsApp'];
 const TYPE_OPTIONS = ['Soporte', 'Mejora', 'Desarrollo', 'Capacitación'];
+
+function toISOorEmpty(v) {
+  if (!v || !String(v).trim()) return '';
+  // v viene de <input type="datetime-local"> (ej: "2025-10-21T14:30")
+  // Lo convertimos a ISO con zona local -> UTC .toISOString()
+  try {
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString();
+  } catch {
+    return '';
+  }
+}
 
 const EditRequestDialog = ({
   open,
@@ -32,7 +43,6 @@ const EditRequestDialog = ({
   setEditData,
   updateRequest,
   saving = false,
-  // Si quieres pasar opciones custom desde arriba, las respetamos; si no, usamos las de arriba.
   typeOptions = TYPE_OPTIONS,
   channelOptions = CHANNEL_OPTIONS,
   departmentOptions = [],
@@ -45,8 +55,9 @@ const EditRequestDialog = ({
     e.preventDefault();
     if (!requestId) return;
 
-    // Sanea el payload para el backend
+    // --- Saneamos tipos y campos ---
     const payload = {
+      // strings
       title: (editData.title || '').trim(),
       description: (editData.description || '').trim(),
       type: editData.type || undefined,
@@ -55,19 +66,19 @@ const EditRequestDialog = ({
       priority: editData.priority || undefined,
     };
 
-    if (editData.level != null && editData.level !== '') {
-      payload.level = Number(editData.level);
-    }
-    if (editData.assigned_to) payload.assigned_to = editData.assigned_to;
+    // números
+    if (editData.level !== '' && editData.level != null) payload.level = Number(editData.level);
+    if (editData.assigned_to !== '' && editData.assigned_to != null) payload.assigned_to = Number(editData.assigned_to);
     if (editData.estimated_hours !== '' && editData.estimated_hours != null) {
       payload.estimated_hours = Number(editData.estimated_hours);
     }
-    if ((editData.estimated_due || '').trim()) {
-      payload.estimated_due = editData.estimated_due;
-    }
 
-    // Llamamos siempre con (id, payload); si tu updateRequest ignora el 2do arg no pasa nada
-    try { updateRequest(requestId, payload); } catch { updateRequest(requestId); }
+    // fecha ISO (si viene)
+    const iso = toISOorEmpty(editData.estimated_due);
+    if (iso) payload.estimated_due = iso;
+
+    // Disparamos el update pasando payload ya limpio
+    updateRequest(requestId, payload);
   };
 
   return (
@@ -75,13 +86,10 @@ const EditRequestDialog = ({
       <DialogContent className="max-w-lg w-full">
         <DialogHeader>
           <DialogTitle>Editar Solicitud</DialogTitle>
-          <DialogDescription>
-            Modifica los campos de la solicitud y guarda los cambios.
-          </DialogDescription>
+          <DialogDescription>Modifica los campos y guarda los cambios.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Título */}
           <div className="space-y-1">
             <Label htmlFor="title">Título</Label>
             <Input
@@ -93,7 +101,6 @@ const EditRequestDialog = ({
             />
           </div>
 
-          {/* Descripción */}
           <div className="space-y-1">
             <Label htmlFor="description">Descripción</Label>
             <Textarea
@@ -105,7 +112,6 @@ const EditRequestDialog = ({
             />
           </div>
 
-          {/* Grid de campos seleccionables */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label>Tipo</Label>
@@ -190,14 +196,8 @@ const EditRequestDialog = ({
             </div>
           </div>
 
-          {/* Acciones */}
           <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               Cancelar
             </Button>
             <Button type="submit" disabled={saving}>

@@ -84,43 +84,69 @@ const RequestsView = ({
 
   // ✅ updateRequest ahora recibe payload ya saneado desde EditRequestDialog
   const updateRequest = async (id, payloadFromDialog) => {
-    try {
-      setSaving(true);
+  setSaving(true);
+  try {
+    // Si no nos pasaron payload, saneamos editData aquí (compatibilidad)
+    const src = payloadFromDialog || editData;
 
-      // Fallback: si no nos pasan payload (compat), usamos editData pero lo saneamos aquí
-      const src = payloadFromDialog || editData;
-
-      const payload = {};
-      if (src.title != null) payload.title = String(src.title).trim();
-      if (src.description != null) payload.description = String(src.description).trim();
-      if (src.type) payload.type = src.type;
-      if (src.channel) payload.channel = src.channel;
-      if (src.department) payload.department = src.department;
-      if (src.priority) payload.priority = src.priority;
-
-      if (src.level !== '' && src.level != null) payload.level = Number(src.level);
-      if (src.assigned_to) payload.assigned_to = src.assigned_to;
-      if (src.estimated_hours !== '' && src.estimated_hours != null) {
-        payload.estimated_hours = Number(src.estimated_hours);
-      }
-      if ((src.estimated_due || '').trim()) payload.estimated_due = src.estimated_due;
-
-      await api.put(`/requests/${id}`, payload, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      setEditDialogFor(null);
-
-      // Si el fetch de la lista se hace en App, podemos forzar un refresco simple:
-      window.location.reload();
-    } catch (error) {
-      const msg = error?.response?.data?.detail || error.message;
-      console.error('❌ Error al actualizar la solicitud:', msg);
-      alert(`No se pudo actualizar la solicitud: ${msg}`);
-    } finally {
-      setSaving(false);
+    const payload = {};
+    if (src.title != null) payload.title = String(src.title).trim();
+    if (src.description != null) payload.description = String(src.description).trim();
+    if (src.type) payload.type = src.type;
+    if (src.channel) payload.channel = src.channel;
+    if (src.department) payload.department = src.department;
+    if (src.priority) payload.priority = src.priority;
+    if (src.level !== '' && src.level != null) payload.level = Number(src.level);
+    if (src.assigned_to !== '' && src.assigned_to != null) payload.assigned_to = Number(src.assigned_to);
+    if (src.estimated_hours !== '' && src.estimated_hours != null) payload.estimated_hours = Number(src.estimated_hours);
+    if (src.estimated_due && String(src.estimated_due).trim()) {
+      // Si viene ya en ISO (desde el Dialog nuevo) lo respetamos; si no, intentamos convertir
+      const maybeISO = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}\.\d{3}Z)?/.test(src.estimated_due)
+        ? src.estimated_due
+        : new Date(src.estimated_due).toISOString();
+      payload.estimated_due = maybeISO;
     }
-  };
+
+    // Intentamos PATCH primero (parcial)
+    let res;
+    try {
+      res = await api.patch(`/requests/${id}`, payload, { headers: { 'Content-Type': 'application/json' }});
+    } catch (err) {
+      // Si el backend no tiene PATCH, probamos PUT
+      if (err?.response?.status === 405 || err?.response?.status === 404) {
+        res = await api.put(`/requests/${id}`, payload, { headers: { 'Content-Type': 'application/json' }});
+      } else {
+        throw err;
+      }
+    }
+
+    const updated = res?.data || { id, ...payload };
+
+    // Refrescamos la lista local sin recargar toda la página
+    // (Si la lista viene de arriba, puedes llamar a fetchRequests en el padre)
+    // Aquí asumimos que "requests" y "setRequests" están en el padre.
+    // Si no los tienes aquí, deja window.location.reload() como fallback:
+    try {
+      if (Array.isArray(requests) && typeof setRequestDialog !== 'undefined') {
+        // no tenemos setRequests aquí, así que simple reload:
+        window.location.reload();
+      } else {
+        window.location.reload();
+      }
+    } catch {
+      window.location.reload();
+    }
+
+    setEditDialogFor(null);
+  } catch (error) {
+    const msg = error?.response?.data?.detail || error.message;
+    console.error('❌ Error al actualizar la solicitud:', msg);
+    alert(`No se pudo actualizar la solicitud: ${msg}`);
+  } finally {
+    setSaving(false);
+  }
+};
+
 
   return (
     <div className="space-y-6">
