@@ -89,61 +89,90 @@ const toISO = (v) => {
   return isNaN(d.getTime()) ? null : d.toISOString();
 };
 
+// Normaliza tipos del form a lo que espera el backend
+const normalize = (src) => {
+  const out = {};
+  const put = (k, v) => { if (v !== '' && v !== undefined && v !== null) out[k] = v; };
+
+  put('title',  src.title != null ? String(src.title).trim() : undefined);
+  put('description', src.description != null ? String(src.description).trim() : undefined);
+  put('type', src.type || undefined);
+  put('channel', src.channel || undefined);
+  put('department', src.department || undefined);
+  put('priority', src.priority || undefined);
+
+  if (src.level !== '' && src.level != null) put('level', Number(src.level));
+  if (src.assigned_to !== '' && src.assigned_to != null) put('assigned_to', Number(src.assigned_to));
+  if (src.estimated_hours !== '' && src.estimated_hours != null) put('estimated_hours', Number(src.estimated_hours));
+  const iso = toISO(src.estimated_due);
+  if (iso) put('estimated_due', iso);
+
+  if (src.status) put('status', src.status);
+  return out;
+};
+
+// Construye delta solo con campos que CAMBIAN vs el objeto original
+const buildDelta = (original, normalized) => {
+  const delta = {};
+  Object.entries(normalized).forEach(([k, v]) => {
+    const ov = original?.[k];
+    // comparar strings/nums/ISO; para fechas el backend guarda UTC, así que solo mandamos si v difiere
+    if (v !== ov && String(v) !== String(ov)) {
+      delta[k] = v;
+    }
+  });
+  return delta;
+};
+
 const updateRequest = async (id, payloadFromDialog) => {
   setSaving(true);
   try {
-    // Origen: payload ya saneado que manda el EditDialog; si no, usamos editData y lo limpiamos aquí
+    // 1) Normalizamos payload (del dialog o del estado)
     const src = payloadFromDialog || editData;
+    const normalized = normalize(src);
 
-    // Normalizamos tipos y enviamos SOLO lo que tenga valor
-    const upd = {};
-    const put = (k, v) => { if (v !== '' && v !== undefined && v !== null) upd[k] = v; };
+    // 2) Buscamos el original para comparar
+    const original = requests.find(r => r.id === id) || {};
 
-    // strings
-    put('title', src.title != null ? String(src.title).trim() : undefined);
-    put('description', src.description != null ? String(src.description).trim() : undefined);
-    put('type', src.type || undefined);
-    put('channel', src.channel || undefined);
-    put('department', src.department || undefined);
-    put('priority', src.priority || undefined);
-
-    // números
-    if (src.level !== '' && src.level != null) put('level', Number(src.level));
-    if (src.assigned_to !== '' && src.assigned_to != null) put('assigned_to', Number(src.assigned_to));
-    if (src.estimated_hours !== '' && src.estimated_hours != null) put('estimated_hours', Number(src.estimated_hours));
-
-    // fecha → ISO
-    const iso = toISO(src.estimated_due);
-    if (iso) put('estimated_due', iso);
-
-    // Si el usuario cambió el estado desde el diálogo, se envía y el backend valida transición
-    if (src.status) put('status', src.status);
+    // 3) Delta = solo cambios reales
+    const upd = buildDelta(original, normalized);
 
     if (Object.keys(upd).length === 0) {
+      // Nada cambió; avisa y sal
+      console.info('[UPDATE] Sin cambios. Payload normalizado:', normalized);
+      alert('No hiciste cambios en la solicitud.');
       setEditDialogFor(null);
-      return; // nada que enviar
+      return;
     }
 
-    // PUT parcial (el backend lo soporta)
-    const res = await api.put(`/requests/${id}`, upd, {
+    console.log('[PUT] /requests/%s payload:', id, upd);
+
+    // 4) PUT parcial (tu backend lo soporta)
+    await api.put(`/requests/${id}`, upd, {
       headers: { 'Content-Type': 'application/json' },
     });
 
-    // Cierra modal y refresca (si prefieres, llama a fetchRequests del padre)
+    // 5) Verificación post-update: leemos la solicitud y validamos que los campos cambiaron
+    const { data: refreshed } = await api.get(`/requests/${id}`);
+    console.log('[GET after PUT] refreshed:', refreshed);
+
+    // Chequeo mínimo: alguno de los keys del delta debe coincidir
+    const changed = Object.keys(upd).some(k => String(refreshed?.[k]) === String(upd[k]));
+    if (!changed) {
+      // Si no vemos el cambio, lo decimos explícito (ayuda a detectar reglas del backend)
+      console.warn('[UPDATE] PUT respondió OK pero no vemos cambios reflejados.', { upd, refreshed });
+      alert('Se envió la actualización, pero no se reflejaron cambios. Revisa que los valores sean válidos para el backend (tipos, enums, permisos).');
+    }
+
     setEditDialogFor(null);
+    // Si tienes fetchRequests en el padre, úsalo; si no, recarga:
     window.location.reload();
+
   } catch (error) {
-    // Muestra feedback útil según lo que devuelva FastAPI
     const status = error?.response?.status;
     const detail = error?.response?.data?.detail;
-
     console.error('❌ PUT /requests/:id error', { status, detail, error });
 
-    // Errores frecuentes del backend:
-    // 400: transición de estado inválida, usuario asignado inexistente, etc.
-    // 403: rol insuficiente (solo support/admin actualizan)
-    // 404: id no existe
-    // 422: tipos inválidos (p.ej., strings en campos numéricos)
     const human =
       (Array.isArray(detail) ? JSON.stringify(detail) :
        typeof detail === 'string' ? detail :
