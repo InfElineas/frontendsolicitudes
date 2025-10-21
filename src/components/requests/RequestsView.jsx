@@ -1,6 +1,6 @@
+// src/components/requests/RequestsView.jsx
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
-// ❌ import axios from 'axios';  // ya no: usamos cliente central
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -10,7 +10,7 @@ import EditRequestDialog from './EditRequestDialog';
 import RequestFilters from './RequestFilters';
 import RequestCard from './RequestCard';
 
-// ✅ Cliente axios centralizado (mismo que App.js)
+// Cliente axios central (mismo baseURL e interceptores que App)
 import api from '@/api/client';
 
 const RequestsView = ({
@@ -33,13 +33,10 @@ const RequestsView = ({
   pageSize,
   setPageSize,
   totalPages,
-  classifyDialogFor,
   setClassifyDialogFor,
   setClassifyData,
-  assignDialogFor,
   setAssignDialogFor,
   setAssignData,
-  feedbackDialogFor,
   setFeedbackDialogFor,
   setFeedbackData,
   takeRequest,
@@ -47,6 +44,8 @@ const RequestsView = ({
   sendToReview,
   backToProgress,
   finishRequest,
+  // opcional: si el padre la expone, refrescamos sin recargar la página
+  fetchRequests
 }) => {
   const [viewDialogFor, setViewDialogFor] = useState(null);
 
@@ -65,7 +64,26 @@ const RequestsView = ({
   });
   const [saving, setSaving] = useState(false);
 
-  // Abre modal de edición con datos precargados
+  // ---- Helpers de fecha ----
+  const toISO = (v) => {
+    if (!v || !String(v).trim()) return undefined;
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
+  };
+  const isoToLocalInput = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const mm = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mi = pad(d.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  };
+
+  // Abre modal de edición con datos precargados (normalizando formatos)
   const openEdit = (id, data) => {
     setEditDialogFor(id);
     setEditData({
@@ -76,75 +94,72 @@ const RequestsView = ({
       department: data?.department || '',
       level: data?.level ?? '',
       estimated_hours: data?.estimated_hours ?? '',
-      estimated_due: data?.estimated_due || '',
+      // si el backend trae ISO/Z, lo transformamos a datetime-local para mostrarlo en el input
+      estimated_due: isoToLocalInput(data?.estimated_due) || '',
       priority: data?.priority || '',
       assigned_to: data?.assigned_to || ''
     });
   };
 
-  // ✅ updateRequest ahora recibe payload ya saneado desde EditRequestDialog
-//import api from '@/api/client';
+  // Normaliza el payload a lo que espera el backend (PUT parcial)
+  const normalize = (src) => {
+    const out = {};
+    const put = (k, v) => { if (v !== '' && v !== undefined && v !== null) out[k] = v; };
 
-const toISO = (v) => {
-  if (!v || !String(v).trim()) return undefined;
-  const d = new Date(v);
-  return isNaN(d.getTime()) ? undefined : d.toISOString();
-};
+    // strings
+    put('title', src.title != null ? String(src.title).trim() : undefined);
+    put('description', src.description != null ? String(src.description).trim() : undefined);
+    put('type', src.type || undefined);
+    put('channel', src.channel || undefined);
+    put('department', src.department || undefined);
+    put('priority', src.priority || undefined);
 
-const normalize = (src) => {
-  const out = {};
-  const put = (k, v) => { if (v !== '' && v !== undefined && v !== null) out[k] = v; };
+    // numéricos
+    if (src.level !== '' && src.level != null) put('level', Number(src.level));
+    if (src.assigned_to !== '' && src.assigned_to != null) put('assigned_to', Number(src.assigned_to));
+    if (src.estimated_hours !== '' && src.estimated_hours != null) put('estimated_hours', Number(src.estimated_hours));
 
-  put('title', src.title != null ? String(src.title).trim() : undefined);
-  put('description', src.description != null ? String(src.description).trim() : undefined);
-  put('type', src.type || undefined);
-  put('channel', src.channel || undefined);
-  put('department', src.department || undefined);
-  put('priority', src.priority || undefined);
+    // fecha ISO (si viene)
+    const iso = toISO(src.estimated_due);
+    if (iso) put('estimated_due', iso);
 
-  if (src.level !== '' && src.level != null) put('level', Number(src.level));
-  if (src.assigned_to !== '' && src.assigned_to != null) put('assigned_to', Number(src.assigned_to));
-  if (src.estimated_hours !== '' && src.estimated_hours != null) put('estimated_hours', Number(src.estimated_hours));
+    // si en el futuro editas estado desde el modal:
+    if (src.status) put('status', src.status);
 
-  const iso = toISO(src.estimated_due);
-  if (iso) put('estimated_due', iso);
+    return out;
+  };
 
-  if (src.status) put('status', src.status); // opcional: si permites editar estado
-  return out;
-};
+  // === Update ===
+  const updateRequest = async (id, payloadFromDialog) => {
+    setSaving(true);
+    try {
+      const upd = normalize(payloadFromDialog || editData);
+      if (Object.keys(upd).length === 0) {
+        setEditDialogFor(null);
+        return;
+      }
 
-const updateRequest = async (id, payloadFromDialog) => {
-  setSaving(true);
-  try {
-    // 1) preparar payload para el backend (PUT parcial)
-    const upd = normalize(payloadFromDialog || editData);
-    if (Object.keys(upd).length === 0) {
+      await api.put(`/requests/${id}`, upd, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+
       setEditDialogFor(null);
-      return;
+
+      // refresco suave si el padre expone fetchRequests; si no, recarga
+      if (typeof fetchRequests === 'function') {
+        await fetchRequests();
+      } else {
+        window.location.reload();
+      }
+    } catch (error) {
+      const status = error?.response?.status;
+      const detail = error?.response?.data?.detail;
+      console.error('❌ PUT /requests/:id error', { status, detail, error });
+      alert(`No se pudo actualizar la solicitud.\n${Array.isArray(detail) ? JSON.stringify(detail) : (detail || error.message)}`);
+    } finally {
+      setSaving(false);
     }
-
-    // 2) PUT parcial (el backend lo soporta)
-    await api.put(`/requests/${id}`, upd, {
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    // 3) éxito: cerramos y refrescamos la lista (sin validación extra que da falsos negativos)
-    setEditDialogFor(null);
-
-    // Si tienes fetchRequests en el padre, úsalo; si no, reload
-    // await fetchRequests(); // <— úsalo si lo tienes accesible aquí
-    window.location.reload();
-  } catch (error) {
-    const status = error?.response?.status;
-    const detail = error?.response?.data?.detail;
-    console.error('❌ PUT /requests/:id error', { status, detail, error });
-    alert(`No se pudo actualizar la solicitud.\n${Array.isArray(detail) ? JSON.stringify(detail) : (detail || error.message)}`);
-  } finally {
-    setSaving(false);
-  }
-};
-
-
+  };
 
   return (
     <div className="space-y-6">
@@ -194,6 +209,7 @@ const updateRequest = async (id, payloadFromDialog) => {
               setAssignDialogFor={setAssignDialogFor}
               setAssignData={setAssignData}
               setFeedbackDialogFor={setFeedbackDialogFor}
+              setFeedbackData={setFeedbackData}
               takeRequest={takeRequest}
               rejectRequest={rejectRequest}
               sendToReview={sendToReview}
@@ -259,10 +275,10 @@ const updateRequest = async (id, payloadFromDialog) => {
         setEditData={setEditData}
         updateRequest={updateRequest}
         saving={saving}
-        // ✅ Enums alineados con creación/app
+        // Enums alineados con creación/app
         typeOptions={['Soporte', 'Mejora', 'Desarrollo', 'Capacitación']}
         channelOptions={['Sistema', 'Google Sheets', 'Correo Electrónico', 'WhatsApp']}
-        // ✅ departments ya es array de strings en App
+        // Departments ya es array de strings desde App
         departmentOptions={departments || []}
       />
     </div>
