@@ -48,29 +48,17 @@ const isLocal =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-// Tomamos la URL del backend desde Vite o CRA o window, con fallback a local en dev
-const candidates = [
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL),
-  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL),
-  (typeof window !== 'undefined' && window.__API_URL),
-  (isLocal ? 'http://localhost:8000' : '')
-];
+// Leemos primero Vite, luego CRA, luego fallback local
+const RAW_BACKEND =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
+  (typeof process !== 'undefined' && process.env?.REACT_APP_BACKEND_URL) ||
+  (isLocal ? 'http://localhost:8000' : '');
 
-// Elegimos el primer string válido
-const RAW_BACKEND = (candidates.find(v => typeof v === 'string' && v.trim().length) || '').trim();
-
-// Si hay backend absoluto => usamos `${BACKEND}/api`; si no, usamos `/api` (proxy)
+// Normalizamos
 const API_BASE = RAW_BACKEND
   ? `${RAW_BACKEND.replace(/\/+$/, '')}/api`
   : '/api';
 
-if (!RAW_BACKEND && !isLocal) {
-  // Aviso no-blocking para prod si olvidaron configurar la URL
-  console.warn(
-    '[App] REACT_APP_BACKEND_URL/VITE_API_URL no definida en producción. Usando "/api". ' +
-    'Asegúrate de tener reglas de proxy/rewrite en el host.'
-  );
-}
 
 const api = axios.create({ baseURL: API_BASE, timeout: 30000 });
 
