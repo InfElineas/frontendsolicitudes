@@ -83,69 +83,78 @@ const RequestsView = ({
   };
 
   // ✅ updateRequest ahora recibe payload ya saneado desde EditRequestDialog
-  const updateRequest = async (id, payloadFromDialog) => {
+const toISO = (v) => {
+  if (!v || !String(v).trim()) return null;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+};
+
+const updateRequest = async (id, payloadFromDialog) => {
   setSaving(true);
   try {
-    // Si no nos pasaron payload, saneamos editData aquí (compatibilidad)
+    // Origen: payload ya saneado que manda el EditDialog; si no, usamos editData y lo limpiamos aquí
     const src = payloadFromDialog || editData;
 
-    const payload = {};
-    if (src.title != null) payload.title = String(src.title).trim();
-    if (src.description != null) payload.description = String(src.description).trim();
-    if (src.type) payload.type = src.type;
-    if (src.channel) payload.channel = src.channel;
-    if (src.department) payload.department = src.department;
-    if (src.priority) payload.priority = src.priority;
-    if (src.level !== '' && src.level != null) payload.level = Number(src.level);
-    if (src.assigned_to !== '' && src.assigned_to != null) payload.assigned_to = Number(src.assigned_to);
-    if (src.estimated_hours !== '' && src.estimated_hours != null) payload.estimated_hours = Number(src.estimated_hours);
-    if (src.estimated_due && String(src.estimated_due).trim()) {
-      // Si viene ya en ISO (desde el Dialog nuevo) lo respetamos; si no, intentamos convertir
-      const maybeISO = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}\.\d{3}Z)?/.test(src.estimated_due)
-        ? src.estimated_due
-        : new Date(src.estimated_due).toISOString();
-      payload.estimated_due = maybeISO;
+    // Normalizamos tipos y enviamos SOLO lo que tenga valor
+    const upd = {};
+    const put = (k, v) => { if (v !== '' && v !== undefined && v !== null) upd[k] = v; };
+
+    // strings
+    put('title', src.title != null ? String(src.title).trim() : undefined);
+    put('description', src.description != null ? String(src.description).trim() : undefined);
+    put('type', src.type || undefined);
+    put('channel', src.channel || undefined);
+    put('department', src.department || undefined);
+    put('priority', src.priority || undefined);
+
+    // números
+    if (src.level !== '' && src.level != null) put('level', Number(src.level));
+    if (src.assigned_to !== '' && src.assigned_to != null) put('assigned_to', Number(src.assigned_to));
+    if (src.estimated_hours !== '' && src.estimated_hours != null) put('estimated_hours', Number(src.estimated_hours));
+
+    // fecha → ISO
+    const iso = toISO(src.estimated_due);
+    if (iso) put('estimated_due', iso);
+
+    // Si el usuario cambió el estado desde el diálogo, se envía y el backend valida transición
+    if (src.status) put('status', src.status);
+
+    if (Object.keys(upd).length === 0) {
+      setEditDialogFor(null);
+      return; // nada que enviar
     }
 
-    // Intentamos PATCH primero (parcial)
-    let res;
-    try {
-      res = await api.patch(`/requests/${id}`, payload, { headers: { 'Content-Type': 'application/json' }});
-    } catch (err) {
-      // Si el backend no tiene PATCH, probamos PUT
-      if (err?.response?.status === 405 || err?.response?.status === 404) {
-        res = await api.put(`/requests/${id}`, payload, { headers: { 'Content-Type': 'application/json' }});
-      } else {
-        throw err;
-      }
-    }
+    // PUT parcial (el backend lo soporta)
+    const res = await api.put(`/requests/${id}`, upd, {
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-    const updated = res?.data || { id, ...payload };
-
-    // Refrescamos la lista local sin recargar toda la página
-    // (Si la lista viene de arriba, puedes llamar a fetchRequests en el padre)
-    // Aquí asumimos que "requests" y "setRequests" están en el padre.
-    // Si no los tienes aquí, deja window.location.reload() como fallback:
-    try {
-      if (Array.isArray(requests) && typeof setRequestDialog !== 'undefined') {
-        // no tenemos setRequests aquí, así que simple reload:
-        window.location.reload();
-      } else {
-        window.location.reload();
-      }
-    } catch {
-      window.location.reload();
-    }
-
+    // Cierra modal y refresca (si prefieres, llama a fetchRequests del padre)
     setEditDialogFor(null);
+    window.location.reload();
   } catch (error) {
-    const msg = error?.response?.data?.detail || error.message;
-    console.error('❌ Error al actualizar la solicitud:', msg);
-    alert(`No se pudo actualizar la solicitud: ${msg}`);
+    // Muestra feedback útil según lo que devuelva FastAPI
+    const status = error?.response?.status;
+    const detail = error?.response?.data?.detail;
+
+    console.error('❌ PUT /requests/:id error', { status, detail, error });
+
+    // Errores frecuentes del backend:
+    // 400: transición de estado inválida, usuario asignado inexistente, etc.
+    // 403: rol insuficiente (solo support/admin actualizan)
+    // 404: id no existe
+    // 422: tipos inválidos (p.ej., strings en campos numéricos)
+    const human =
+      (Array.isArray(detail) ? JSON.stringify(detail) :
+       typeof detail === 'string' ? detail :
+       error?.message) || 'Error desconocido';
+
+    alert(`No se pudo actualizar la solicitud.\n${human}`);
   } finally {
     setSaving(false);
   }
 };
+
 
 
   return (
