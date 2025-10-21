@@ -83,18 +83,19 @@ const RequestsView = ({
   };
 
   // ✅ updateRequest ahora recibe payload ya saneado desde EditRequestDialog
+//import api from '@/api/client';
+
 const toISO = (v) => {
-  if (!v || !String(v).trim()) return null;
+  if (!v || !String(v).trim()) return undefined;
   const d = new Date(v);
-  return isNaN(d.getTime()) ? null : d.toISOString();
+  return isNaN(d.getTime()) ? undefined : d.toISOString();
 };
 
-// Normaliza tipos del form a lo que espera el backend
 const normalize = (src) => {
   const out = {};
   const put = (k, v) => { if (v !== '' && v !== undefined && v !== null) out[k] = v; };
 
-  put('title',  src.title != null ? String(src.title).trim() : undefined);
+  put('title', src.title != null ? String(src.title).trim() : undefined);
   put('description', src.description != null ? String(src.description).trim() : undefined);
   put('type', src.type || undefined);
   put('channel', src.channel || undefined);
@@ -104,81 +105,40 @@ const normalize = (src) => {
   if (src.level !== '' && src.level != null) put('level', Number(src.level));
   if (src.assigned_to !== '' && src.assigned_to != null) put('assigned_to', Number(src.assigned_to));
   if (src.estimated_hours !== '' && src.estimated_hours != null) put('estimated_hours', Number(src.estimated_hours));
+
   const iso = toISO(src.estimated_due);
   if (iso) put('estimated_due', iso);
 
-  if (src.status) put('status', src.status);
+  if (src.status) put('status', src.status); // opcional: si permites editar estado
   return out;
-};
-
-// Construye delta solo con campos que CAMBIAN vs el objeto original
-const buildDelta = (original, normalized) => {
-  const delta = {};
-  Object.entries(normalized).forEach(([k, v]) => {
-    const ov = original?.[k];
-    // comparar strings/nums/ISO; para fechas el backend guarda UTC, así que solo mandamos si v difiere
-    if (v !== ov && String(v) !== String(ov)) {
-      delta[k] = v;
-    }
-  });
-  return delta;
 };
 
 const updateRequest = async (id, payloadFromDialog) => {
   setSaving(true);
   try {
-    // 1) Normalizamos payload (del dialog o del estado)
-    const src = payloadFromDialog || editData;
-    const normalized = normalize(src);
-
-    // 2) Buscamos el original para comparar
-    const original = requests.find(r => r.id === id) || {};
-
-    // 3) Delta = solo cambios reales
-    const upd = buildDelta(original, normalized);
-
+    // 1) preparar payload para el backend (PUT parcial)
+    const upd = normalize(payloadFromDialog || editData);
     if (Object.keys(upd).length === 0) {
-      // Nada cambió; avisa y sal
-      console.info('[UPDATE] Sin cambios. Payload normalizado:', normalized);
-      alert('No hiciste cambios en la solicitud.');
       setEditDialogFor(null);
       return;
     }
 
-    console.log('[PUT] /requests/%s payload:', id, upd);
-
-    // 4) PUT parcial (tu backend lo soporta)
+    // 2) PUT parcial (el backend lo soporta)
     await api.put(`/requests/${id}`, upd, {
       headers: { 'Content-Type': 'application/json' },
     });
 
-    // 5) Verificación post-update: leemos la solicitud y validamos que los campos cambiaron
-    const { data: refreshed } = await api.get(`/requests/${id}`);
-    console.log('[GET after PUT] refreshed:', refreshed);
-
-    // Chequeo mínimo: alguno de los keys del delta debe coincidir
-    const changed = Object.keys(upd).some(k => String(refreshed?.[k]) === String(upd[k]));
-    if (!changed) {
-      // Si no vemos el cambio, lo decimos explícito (ayuda a detectar reglas del backend)
-      console.warn('[UPDATE] PUT respondió OK pero no vemos cambios reflejados.', { upd, refreshed });
-      alert('Se envió la actualización, pero no se reflejaron cambios. Revisa que los valores sean válidos para el backend (tipos, enums, permisos).');
-    }
-
+    // 3) éxito: cerramos y refrescamos la lista (sin validación extra que da falsos negativos)
     setEditDialogFor(null);
-    // Si tienes fetchRequests en el padre, úsalo; si no, recarga:
-    window.location.reload();
 
+    // Si tienes fetchRequests en el padre, úsalo; si no, reload
+    // await fetchRequests(); // <— úsalo si lo tienes accesible aquí
+    window.location.reload();
   } catch (error) {
     const status = error?.response?.status;
     const detail = error?.response?.data?.detail;
     console.error('❌ PUT /requests/:id error', { status, detail, error });
-
-    const human =
-      (Array.isArray(detail) ? JSON.stringify(detail) :
-       typeof detail === 'string' ? detail :
-       error?.message) || 'Error desconocido';
-
-    alert(`No se pudo actualizar la solicitud.\n${human}`);
+    alert(`No se pudo actualizar la solicitud.\n${Array.isArray(detail) ? JSON.stringify(detail) : (detail || error.message)}`);
   } finally {
     setSaving(false);
   }
