@@ -189,6 +189,7 @@ const RequestsView = ({
         setFilters={setFilters}
         departments={departments}
         setPage={setPage}
+        users={users}
       />
 
       {/* Lista de solicitudes */}

@@ -151,7 +151,7 @@ function App() {
   const sanitizeFilters = (raw) => {
     const def = {
       status: 'all', department: 'all', type: 'all', level: 'all',
-      channel: 'all', q: '', sort: '-created_at'
+      channel: 'all', q: '', sort: '-created_at',created_by: 'all', assigned_by: 'all'  
     };
     const f = { ...def, ...(raw || {}) };
     const pick = (k) => VALID[k].includes(f[k]) ? f[k] : def[k];
@@ -219,6 +219,13 @@ function App() {
     fetchRequests();
     if (user.role === 'admin') fetchUsers();
     if (user.role === 'support' || user.role === 'admin') fetchAnalytics();
+    if (filters.created_by && filters.created_by !== 'all') {
+  params.set('created_by', Number(filters.created_by));
+}
+if (filters.assigned_by && filters.assigned_by !== 'all') {
+  params.set('assigned_by', Number(filters.assigned_by));
+}
+
   }, [user, analyticsPeriod, page, pageSize, filters]);
 
   /* ===========================

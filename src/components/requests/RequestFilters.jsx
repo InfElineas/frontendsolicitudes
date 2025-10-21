@@ -3,14 +3,36 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const RequestFilters = ({ filters, setFilters, departments, setPage }) => {
+/**
+ * Props:
+ * - filters: {
+ *     q, status, department, type, level, channel, sort,
+ *     created_by,  // 'all' o id (string/number)
+ *     assigned_by, // 'all' o id (string/number)
+ *   }
+ * - setFilters: (f) => void
+ * - departments: string[]
+ * - setPage: (n) => void
+ * - users: Array<{ id: number|string, full_name: string, role?: string, department?: string }>
+ */
+const RequestFilters = ({ filters, setFilters, departments, setPage, users = [] }) => {
   const handleChange = (field, value) => {
     setFilters({ ...filters, [field]: value });
-    setPage(1); // reinicia a la primera página cuando cambia un filtro
+    setPage(1); // reset paginación al cambiar filtros
   };
 
+  // Opciones para "Creado por": todos los usuarios
+  const creatorOptions = users;
+
+  // Opciones para "Asignado por": quienes asignan (support/admin). Si no viene role, mostramos todos.
+  const assignerOptions = Array.isArray(users)
+    ? users.filter(u => !u.role || u.role === 'support' || u.role === 'admin')
+    : [];
+
+  const userLabel = (u) => u?.full_name || u?.username || `Usuario ${u?.id}`;
+
   return (
-    <div className="bg-white border rounded-lg p-4 grid grid-cols-1 md:grid-cols-6 gap-4">
+    <div className="bg-white border rounded-lg p-4 grid grid-cols-1 md:grid-cols-8 gap-4">
       {/* Buscar */}
       <div className="md:col-span-2">
         <Label className="text-sm">Buscar</Label>
@@ -88,8 +110,43 @@ const RequestFilters = ({ filters, setFilters, departments, setPage }) => {
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="Sistema">Sistema</SelectItem>
-            <SelectItem value="Correo">Correo</SelectItem>
+            <SelectItem value="Google Sheets">Google Sheets</SelectItem>
+            <SelectItem value="Correo Electrónico">Correo Electrónico</SelectItem>
             <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Creado por */}
+      <div>
+        <Label className="text-sm">Creado por</Label>
+        <Select
+          value={filters.created_by}
+          onValueChange={(value) => handleChange('created_by', value)}
+        >
+          <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            {creatorOptions.map(u => (
+              <SelectItem key={u.id} value={String(u.id)}>{userLabel(u)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Asignado por */}
+      <div>
+        <Label className="text-sm">Asignado por</Label>
+        <Select
+          value={filters.assigned_by}
+          onValueChange={(value) => handleChange('assigned_by', value)}
+        >
+          <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            {assignerOptions.map(u => (
+              <SelectItem key={u.id} value={String(u.id)}>{userLabel(u)}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
