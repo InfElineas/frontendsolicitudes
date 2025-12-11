@@ -48,11 +48,20 @@ const isLocal =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-// Leemos primero Vite, luego CRA, luego fallback local
-const RAW_BACKEND =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
-  (typeof process !== 'undefined' && process.env?.REACT_APP_BACKEND_URL) ||
-  (isLocal ? 'http://localhost:8000' : '');
+// URL de backend (evitamos import.meta para no requerir <script type="module">)
+const RAW_BACKEND = (() => {
+  if (typeof process !== 'undefined' && process.env?.REACT_APP_BACKEND_URL) {
+    return process.env.REACT_APP_BACKEND_URL;
+  }
+
+  if (typeof window !== 'undefined') {
+    // Opciones para despliegues con variables globales inyectadas
+    const globals = window.__API_URL || window.API_URL || window.BACKEND_URL;
+    if (globals) return globals;
+  }
+
+  return isLocal ? 'http://localhost:8000' : '';
+})();
 
 // Normalizamos
 const API_BASE = RAW_BACKEND
@@ -150,11 +159,24 @@ function App() {
 
   const sanitizeFilters = (raw) => {
     const def = {
-      status: 'all', department: 'all', type: 'all', level: 'all',
-      channel: 'all', q: '', sort: '-created_at',created_by: 'all', assigned_by: 'all'  
+      status: 'all',
+      department: 'all',
+      type: 'all',
+      level: 'all',
+      channel: 'all',
+      q: '',
+      sort: '-created_at',
+      created_by: 'all',
+      assigned_by: 'all',
+      assigned_to: 'all'
     };
     const f = { ...def, ...(raw || {}) };
     const pick = (k) => VALID[k].includes(f[k]) ? f[k] : def[k];
+    const idOrAll = (val) => {
+      if (val === undefined || val === null || val === '' || val === 'all') return 'all';
+      const num = Number(val);
+      return Number.isFinite(num) ? String(num) : 'all';
+    };
     return {
       status: pick('status'),
       department: pick('department'),
@@ -163,6 +185,9 @@ function App() {
       channel: pick('channel'),
       q: typeof f.q === 'string' ? f.q : '',
       sort: pick('sort'),
+      created_by: idOrAll(f.created_by),
+      assigned_by: idOrAll(f.assigned_by),
+      assigned_to: idOrAll(f.assigned_to),
     };
   };
 
@@ -219,13 +244,6 @@ function App() {
     fetchRequests();
     if (user.role === 'admin') fetchUsers();
     if (user.role === 'support' || user.role === 'admin') fetchAnalytics();
-    if (filters.created_by && filters.created_by !== 'all') {
-  params.set('created_by', Number(filters.created_by));
-}
-if (filters.assigned_by && filters.assigned_by !== 'all') {
-  params.set('assigned_by', Number(filters.assigned_by));
-}
-
   }, [user, analyticsPeriod, page, pageSize, filters]);
 
   /* ===========================
@@ -253,6 +271,9 @@ if (filters.assigned_by && filters.assigned_by !== 'all') {
       if (filters.type !== 'all') params.set('type', filters.type);
       if (filters.level !== 'all') params.set('level', Number(filters.level));
       if (filters.channel !== 'all') params.set('channel', filters.channel);
+      if (filters.created_by !== 'all') params.set('created_by', Number(filters.created_by));
+      if (filters.assigned_by !== 'all') params.set('assigned_by', Number(filters.assigned_by));
+      if (filters.assigned_to !== 'all') params.set('assigned_to', Number(filters.assigned_to));
 
       const { data } = await api.get(`/requests?${params.toString()}`);
       setRequests(data.items || []);

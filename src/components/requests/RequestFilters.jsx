@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
  *     q, status, department, type, level, channel, sort,
  *     created_by,  // 'all' o id (string/number)
  *     assigned_by, // 'all' o id (string/number)
+ *     assigned_to, // 'all' o id (string/number)
  *   }
  * - setFilters: (f) => void
  * - departments: string[]
@@ -26,6 +27,11 @@ const RequestFilters = ({ filters, setFilters, departments, setPage, users = [] 
 
   // Opciones para "Asignado por": quienes asignan (support/admin). Si no viene role, mostramos todos.
   const assignerOptions = Array.isArray(users)
+    ? users.filter(u => !u.role || u.role === 'support' || u.role === 'admin')
+    : [];
+
+  // Opciones para "Asignado a": generalmente técnicos o administradores
+  const assigneeOptions = Array.isArray(users)
     ? users.filter(u => !u.role || u.role === 'support' || u.role === 'admin')
     : [];
 
@@ -134,11 +140,11 @@ const RequestFilters = ({ filters, setFilters, departments, setPage, users = [] 
         </Select>
       </div>
 
-      {/* Asignado por */}
-      <div>
-        <Label className="text-sm">Asignado por</Label>
-        <Select
-          value={filters.assigned_by}
+        {/* Asignado por */}
+        <div>
+          <Label className="text-sm">Asignado por</Label>
+          <Select
+            value={filters.assigned_by}
           onValueChange={(value) => handleChange('assigned_by', value)}
         >
           <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
@@ -147,9 +153,26 @@ const RequestFilters = ({ filters, setFilters, departments, setPage, users = [] 
             {assignerOptions.map(u => (
               <SelectItem key={u.id} value={String(u.id)}>{userLabel(u)}</SelectItem>
             ))}
-          </SelectContent>
-        </Select>
-      </div>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Asignado a */}
+        <div>
+          <Label className="text-sm">Asignado a</Label>
+          <Select
+            value={filters.assigned_to}
+            onValueChange={(value) => handleChange('assigned_to', value)}
+          >
+            <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {assigneeOptions.map(u => (
+                <SelectItem key={u.id} value={String(u.id)}>{userLabel(u)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
       {/* Orden */}
       <div className="md:col-span-2">
