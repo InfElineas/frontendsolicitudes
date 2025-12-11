@@ -48,11 +48,20 @@ const isLocal =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-// Leemos primero Vite, luego CRA, luego fallback local
-const RAW_BACKEND =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
-  (typeof process !== 'undefined' && process.env?.REACT_APP_BACKEND_URL) ||
-  (isLocal ? 'http://localhost:8000' : '');
+// URL de backend (evitamos import.meta para no requerir <script type="module">)
+const RAW_BACKEND = (() => {
+  if (typeof process !== 'undefined' && process.env?.REACT_APP_BACKEND_URL) {
+    return process.env.REACT_APP_BACKEND_URL;
+  }
+
+  if (typeof window !== 'undefined') {
+    // Opciones para despliegues con variables globales inyectadas
+    const globals = window.__API_URL || window.API_URL || window.BACKEND_URL;
+    if (globals) return globals;
+  }
+
+  return isLocal ? 'http://localhost:8000' : '';
+})();
 
 // Normalizamos
 const API_BASE = RAW_BACKEND

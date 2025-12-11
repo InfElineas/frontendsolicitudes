@@ -24,3 +24,6 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    # Permite los bundles generados por CRA/Craco y evita que CSP bloquee la app.
+    # Si más adelante se eliminan todos los scripts inline, puede retirarse 'unsafe-inline'.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://backendsolicitudes.onrender.com; font-src 'self' data:;"
