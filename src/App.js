@@ -148,7 +148,7 @@ function App() {
       'Punto de Venta','Almacén','Picker and Packer','Estibadores'
     ],
     type: ['all','Soporte','Mejora','Desarrollo','Capacitación'],
-    level: ['all','1 (simple/capacitación)','2 (soporte/correcciones)','3 (desarrollo/automatización)'],
+    level: ['all','1','2','3'],
     channel: ['all','Sistema','Google Sheets','Correo Electrónico','WhatsApp'],
     sort: [
       '-created_at','created_at','-requested_at','requested_at',
@@ -242,9 +242,13 @@ function App() {
   useEffect(() => {
     if (!user) return;
     fetchRequests();
-    if (user.role === 'admin') fetchUsers();
     if (user.role === 'support' || user.role === 'admin') fetchAnalytics();
   }, [user, analyticsPeriod, page, pageSize, filters]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchUsers();
+  }, [user]);
 
   /* ===========================
             API calls

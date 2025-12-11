@@ -25,10 +25,9 @@ const RequestFilters = ({ filters, setFilters, departments, setPage, users = [] 
   // Opciones para "Creado por": todos los usuarios
   const creatorOptions = users;
 
-  // Opciones para "Asignado por": quienes asignan (support/admin). Si no viene role, mostramos todos.
-  const assignerOptions = Array.isArray(users)
-    ? users.filter(u => !u.role || u.role === 'support' || u.role === 'admin')
-    : [];
+  // Opciones para "Asignado por/Asignado a": todos los usuarios disponibles
+  const assignerOptions = users;
+  const assigneeOptions = users;
 
   // Opciones para "Asignado a": generalmente técnicos o administradores
   const assigneeOptions = Array.isArray(users)
