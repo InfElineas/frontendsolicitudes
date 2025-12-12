@@ -55,5 +55,32 @@ describe('analyticsUtils', () => {
     expect(global.averageFinishedPerTech).toBeCloseTo(2);
     expect(global.technicianCount).toBe(2);
   });
+
+  test('normalization prioritizes status totals when breakdown exists', () => {
+    const rows = [
+      {
+        user_id: '3',
+        name: 'Mia',
+        status_breakdown: {
+          pending: 1,
+          'in progress': 1,
+          review: 0,
+          finished: 2,
+        },
+        assigned_total: 50, // histórico, debe ignorarse si hay breakdown del periodo
+      },
+      {
+        user_id: '4',
+        name: 'Leo',
+        assigned_total: 4,
+        in_progress: 2,
+        in_review: 1,
+      },
+    ];
+
+    const normalized = normalizeProductivityRows(rows);
+    expect(normalized[0]).toMatchObject({ assigned: 4, finished: 2, pending: 1, inProgress: 1 });
+    expect(normalized[1]).toMatchObject({ assigned: 4, inProgress: 2, inReview: 1, finished: 0, pending: 0 });
+  });
 });
 

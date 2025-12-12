@@ -192,6 +192,17 @@ const RequestsView = ({
         users={users}
       />
 
+      <PaginationControls
+        position="top"
+        pageInfo={pageInfo}
+        total={total}
+        page={page}
+        setPage={setPage}
+        pageSize={pageSize}
+        setPageSize={setPageSize}
+        totalPages={totalPages}
+      />
+
       {/* Lista de solicitudes */}
       <div className="grid gap-4">
         {requests.length === 0 ? (
@@ -227,38 +238,16 @@ const RequestsView = ({
         )}
       </div>
 
-      {/* Paginación */}
-      <div className="mt-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div className="text-sm text-gray-600">
-          Mostrando <span className="font-medium">{pageInfo.from}</span>–<span className="font-medium">{pageInfo.to}</span> de <span className="font-medium">{total}</span>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <label className="text-sm mr-2">Por página</label>
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setPage(1);
-            }}
-            className="border rounded px-2 py-1 text-sm"
-          >
-            {[5, 10, 20, 30].map((size) => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-              Anterior
-            </Button>
-            <span className="text-sm text-gray-700">
-              Página <span className="font-medium">{page}</span> / {totalPages}
-            </span>
-            <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-              Siguiente
-            </Button>
-          </div>
-        </div>
-      </div>
+      <PaginationControls
+        position="bottom"
+        pageInfo={pageInfo}
+        total={total}
+        page={page}
+        setPage={setPage}
+        pageSize={pageSize}
+        setPageSize={setPageSize}
+        totalPages={totalPages}
+      />
 
       {/* Detalle de solicitud */}
       <RequestDetailDialog
@@ -285,5 +274,53 @@ const RequestsView = ({
     </div>
   );
 };
+
+function PaginationControls({
+  position,
+  pageInfo,
+  total,
+  page,
+  setPage,
+  pageSize,
+  setPageSize,
+  totalPages,
+}) {
+  return (
+    <div
+      className={`flex flex-col md:flex-row md:items-center md:justify-between gap-3 ${position === 'top' ? '' : 'mt-6'}`}
+      data-testid={`pagination-${position}`}
+    >
+      <div className="text-sm text-gray-600">
+        Mostrando <span className="font-medium">{pageInfo.from}</span>–<span className="font-medium">{pageInfo.to}</span> de <span className="font-medium">{total}</span>
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className="text-sm mr-2">Por página</label>
+        <select
+          value={pageSize}
+          onChange={(e) => {
+            setPageSize(Number(e.target.value));
+            setPage(1);
+          }}
+          className="border rounded px-2 py-1 text-sm"
+        >
+          {[5, 10, 20, 30].map((size) => (
+            <option key={size} value={size}>{size}</option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+            Anterior
+          </Button>
+          <span className="text-sm text-gray-700">
+            Página <span className="font-medium">{page}</span> / {totalPages}
+          </span>
+          <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+            Siguiente
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default RequestsView;

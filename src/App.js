@@ -220,7 +220,7 @@ function App() {
 
   // analytics
   const [analytics, setAnalytics] = useState(null);
-  const [analyticsPeriod, setAnalyticsPeriod] = useState(() => localStorage.getItem('analyticsPeriod') || 'month');
+  const [analyticsPeriod, setAnalyticsPeriod] = useState(() => localStorage.getItem('analyticsPeriod') || 'all');
   const [analyticsFilters, setAnalyticsFilters] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('analyticsFilters'));
@@ -257,11 +257,6 @@ function App() {
     if (!user) return;
     if (user.role === 'support' || user.role === 'admin') fetchAnalytics();
   }, [user, analyticsPeriod]);
-
-  useEffect(() => {
-    if (!user) return;
-    fetchUsers();
-  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -320,11 +315,13 @@ function App() {
     }
   };
 
-  const periodMap = { day: 'daily', week: 'weekly', month: 'monthly' };
+  const periodMap = { all: 'all', day: 'daily', week: 'weekly', month: 'monthly' };
   const fetchAnalytics = async () => {
     try {
       const period = periodMap[analyticsPeriod] || 'monthly';
-      const { data } = await api.get(`/reports/summary?period=${period}`);
+      const baseUrl = '/reports/summary';
+      const url = analyticsPeriod === 'all' ? baseUrl : `${baseUrl}?period=${period}`;
+      const { data } = await api.get(url);
       setAnalytics(data);
     } catch (error) {
       console.error('Error fetching analytics:', error);

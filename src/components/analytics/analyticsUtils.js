@@ -53,20 +53,25 @@ const extractStatusBreakdown = (row) => {
 export const normalizeProductivityRows = (rows = []) => {
   return rows.map((row) => {
     const statusCounts = extractStatusBreakdown(row);
+    const hasStatusBreakdown = Object.keys(statusCounts).length > 0;
 
     const pending = coalesce(statusCounts.pending, row?.pending_now, row?.pending);
     const inProgress = coalesce(statusCounts.inProgress, row?.in_progress, row?.progress);
     const inReview = coalesce(statusCounts.inReview, row?.in_review, row?.review);
     const finished = coalesce(statusCounts.finished, row?.attended_period, row?.finished, row?.finalizadas);
 
-    const assigned = coalesce(
-      row?.assigned_total,
-      row?.assigned,
-      row?.total_assigned,
-      row?.total,
-      row?.count,
-      pending + inProgress + inReview + finished,
-    );
+    const statusTotal = pending + inProgress + inReview + finished;
+    const assigned = hasStatusBreakdown
+      ? statusTotal
+      : coalesce(
+          row?.assigned_period,
+          row?.assigned,
+          row?.total_assigned,
+          row?.assigned_total,
+          row?.total,
+          row?.count,
+          statusTotal,
+        );
 
     return {
       user_id: row?.user_id ?? row?.id ?? row?.user ?? row?.username ?? row?.name ?? 'unknown',

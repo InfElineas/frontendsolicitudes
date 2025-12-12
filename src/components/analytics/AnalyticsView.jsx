@@ -49,6 +49,7 @@ function AnalyticsView({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">Todos los tiempos</SelectItem>
               <SelectItem value="day">Último día</SelectItem>
               <SelectItem value="week">Última semana</SelectItem>
               <SelectItem value="month">Último mes</SelectItem>
