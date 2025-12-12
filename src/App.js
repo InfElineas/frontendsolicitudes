@@ -221,7 +221,16 @@ function App() {
   // analytics
   const [analytics, setAnalytics] = useState(null);
   const [analyticsPeriod, setAnalyticsPeriod] = useState(() => localStorage.getItem('analyticsPeriod') || 'month');
+  const [analyticsFilters, setAnalyticsFilters] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('analyticsFilters'));
+      return stored || { technician: 'all', department: 'all' };
+    } catch (e) {
+      return { technician: 'all', department: 'all' };
+    }
+  });
   useEffect(() => { localStorage.setItem('analyticsPeriod', analyticsPeriod); }, [analyticsPeriod]);
+  useEffect(() => { localStorage.setItem('analyticsFilters', JSON.stringify(analyticsFilters)); }, [analyticsFilters]);
 
   // diálogos/acciones
   const [classifyDialogFor, setClassifyDialogFor] = useState(null);
@@ -242,8 +251,17 @@ function App() {
   useEffect(() => {
     if (!user) return;
     fetchRequests();
+  }, [user, page, pageSize, filters]);
+
+  useEffect(() => {
+    if (!user) return;
     if (user.role === 'support' || user.role === 'admin') fetchAnalytics();
-  }, [user, analyticsPeriod, page, pageSize, filters]);
+  }, [user, analyticsPeriod]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchUsers();
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -677,6 +695,10 @@ function App() {
                 analytics={analytics}
                 analyticsPeriod={analyticsPeriod}
                 setAnalyticsPeriod={setAnalyticsPeriod}
+                analyticsFilters={analyticsFilters}
+                setAnalyticsFilters={setAnalyticsFilters}
+                users={users}
+                departments={departments}
               />
             </TabsContent>
           )}
