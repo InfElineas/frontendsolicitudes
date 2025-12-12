@@ -318,11 +318,11 @@ function App() {
   const periodMap = { all: 'all', day: 'daily', week: 'weekly', month: 'monthly' };
   const fetchAnalytics = async () => {
     try {
-      const period = periodMap[analyticsPeriod] || 'monthly';
+      const mappedPeriod = periodMap[analyticsPeriod];
       const baseUrl = '/reports/summary';
       const params = new URLSearchParams();
-      params.set('period', period);
-      const { data } = await api.get(`${baseUrl}?${params.toString()}`);
+      if (mappedPeriod) params.set('period', mappedPeriod);
+      const { data } = await api.get(params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl);
       setAnalytics(data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
