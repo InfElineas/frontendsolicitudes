@@ -16,7 +16,7 @@ function AnalyticsView({
   users = [],
   departments = [],
 }) {
-  const { filtered, global } = useProductivity(analytics, analyticsFilters);
+  const { filtered, global, ranking } = useProductivity(analytics, analyticsFilters);
 
   const maxFinished = useMemo(() => Math.max(...filtered.map((row) => Number(row.finished) || 0), 0), [filtered]);
   const maxTotal = useMemo(() => Math.max(
@@ -202,6 +202,42 @@ function AnalyticsView({
               </CardContent>
             </Card>
           </div>
+
+          {/* Ranking por técnico */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ranking de técnicos</CardTitle>
+              <CardDescription>Ordenado por finalizadas y asignadas en el periodo</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(!noData) ? (
+                <div className="overflow-x-auto -mx-4 sm:mx-0">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-600">
+                        <th className="py-2 pr-2">Posición</th>
+                        <th className="py-2 pr-2">Técnico</th>
+                        <th className="py-2 pr-2 text-right">Finalizadas</th>
+                        <th className="py-2 pr-2 text-right">Asignadas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ranking.map((row) => (
+                        <tr key={row.user_id} className="border-t border-gray-100">
+                          <td className="py-2 pr-2 whitespace-nowrap font-medium">#{row.position}</td>
+                          <td className="py-2 pr-2 whitespace-nowrap">{row.name || 'Sin asignación'}</td>
+                          <td className="py-2 pr-2 text-right">{row.finished ?? 0}</td>
+                          <td className="py-2 pr-2 text-right">{row.assigned ?? 0}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Sin datos para mostrar ranking.</p>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
     </div>

@@ -1,4 +1,4 @@
-import { computeGlobalMetrics, filterProductivityRows, normalizeProductivityRows } from './analyticsUtils';
+import { buildRanking, computeGlobalMetrics, filterProductivityRows, normalizeProductivityRows } from './analyticsUtils';
 
 describe('analyticsUtils', () => {
   const sample = [
@@ -81,6 +81,50 @@ describe('analyticsUtils', () => {
     const normalized = normalizeProductivityRows(rows);
     expect(normalized[0]).toMatchObject({ assigned: 4, finished: 2, pending: 1, inProgress: 1 });
     expect(normalized[1]).toMatchObject({ assigned: 4, inProgress: 2, inReview: 1, finished: 0, pending: 0 });
+  });
+
+  test('normalization accepts underscore and uppercase status keys', () => {
+    const rows = [
+      {
+        user_id: '5',
+        name: 'Keyla',
+        status_breakdown: {
+          PENDING_NOW: 2,
+          IN_PROGRESS: 3,
+          IN_REVIEW: 1,
+          COMPLETADAS: 4,
+        },
+      },
+    ];
+
+    const normalized = normalizeProductivityRows(rows);
+    expect(normalized[0]).toMatchObject({ assigned: 10, pending: 2, inProgress: 3, inReview: 1, finished: 4 });
+  });
+
+  test('ranking orders by finished then assigned and reacts to dataset size', () => {
+    const rowsAll = normalizeProductivityRows([
+      { user_id: '1', name: 'Ana', status_breakdown: { finished: 5, pending: 1 } },
+      { user_id: '2', name: 'Luis', status_breakdown: { finished: 3, pending: 4 } },
+      { user_id: '3', name: 'Mia', status_breakdown: { finished: 3, pending: 2 } },
+    ]);
+
+    const rowsMonth = normalizeProductivityRows([
+      { user_id: '1', name: 'Ana', status_breakdown: { finished: 2, pending: 1 } },
+      { user_id: '2', name: 'Luis', status_breakdown: { finished: 1, pending: 1 } },
+      { user_id: '3', name: 'Mia', status_breakdown: { finished: 0, pending: 1 } },
+    ]);
+
+    const rankingAll = buildRanking(rowsAll);
+    const rankingMonth = buildRanking(rowsMonth);
+
+    expect(rankingAll.map((r) => r.user_id)).toEqual(['1', '2', '3']);
+    expect(rankingMonth.map((r) => r.user_id)).toEqual(['1', '2', '3']);
+
+    const globalAll = computeGlobalMetrics(rowsAll);
+    const globalMonth = computeGlobalMetrics(rowsMonth);
+
+    expect(globalAll.finished).toBeGreaterThanOrEqual(globalMonth.finished);
+    expect(globalAll.assigned).toBeGreaterThanOrEqual(globalMonth.assigned);
   });
 });
 

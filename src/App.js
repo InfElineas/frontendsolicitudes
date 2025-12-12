@@ -320,8 +320,9 @@ function App() {
     try {
       const period = periodMap[analyticsPeriod] || 'monthly';
       const baseUrl = '/reports/summary';
-      const url = analyticsPeriod === 'all' ? baseUrl : `${baseUrl}?period=${period}`;
-      const { data } = await api.get(url);
+      const params = new URLSearchParams();
+      params.set('period', period);
+      const { data } = await api.get(`${baseUrl}?${params.toString()}`);
       setAnalytics(data);
     } catch (error) {
       console.error('Error fetching analytics:', error);

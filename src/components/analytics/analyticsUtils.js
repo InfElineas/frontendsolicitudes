@@ -6,10 +6,16 @@ import { useMemo } from 'react';
 const STATUS_KEYS = {
   pendiente: 'pending',
   pending: 'pending',
+  pending_now: 'pending',
+  pendientes: 'pending',
   'in progress': 'inProgress',
+  in_progress: 'inProgress',
+  inprogress: 'inProgress',
   'en progreso': 'inProgress',
   progreso: 'inProgress',
   progress: 'inProgress',
+  inreview: 'inReview',
+  in_review: 'inReview',
   revision: 'inReview',
   review: 'inReview',
   'en revisión': 'inReview',
@@ -21,6 +27,7 @@ const STATUS_KEYS = {
   finished: 'finished',
   done: 'finished',
   completada: 'finished',
+  completadas: 'finished',
 };
 
 const coalesce = (...values) => values.find((v) => Number.isFinite(Number(v))) ?? 0;
@@ -86,6 +93,19 @@ export const normalizeProductivityRows = (rows = []) => {
   });
 };
 
+export const buildRanking = (rows = []) => {
+  const sorted = [...rows].sort((a, b) => {
+    const finishedA = Number(a.finished) || 0;
+    const finishedB = Number(b.finished) || 0;
+    if (finishedA !== finishedB) return finishedB - finishedA;
+    const assignedA = Number(a.assigned) || 0;
+    const assignedB = Number(b.assigned) || 0;
+    return assignedB - assignedA;
+  });
+
+  return sorted.map((row, index) => ({ ...row, position: index + 1 }));
+};
+
 export const filterProductivityRows = (rows, filters = {}) => {
   const tech = filters.technician || 'all';
   const dept = filters.department || 'all';
@@ -131,7 +151,8 @@ export const useProductivity = (analytics, filters) => {
     const normalized = normalizeProductivityRows(analytics?.productivity_by_tech || []);
     const filtered = filterProductivityRows(normalized, filters);
     const global = computeGlobalMetrics(filtered);
-    return { normalized, filtered, global };
+    const ranking = buildRanking(filtered);
+    return { normalized, filtered, global, ranking };
   }, [analytics, filters]);
 };
 
