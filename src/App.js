@@ -315,7 +315,7 @@ function App() {
     }
   };
 
-  const periodMap = { day: 'daily', week: 'weekly', month: 'monthly' };
+  const periodMap = { all: 'all', day: 'daily', week: 'weekly', month: 'monthly' };
   const fetchAnalytics = async () => {
     try {
       const mappedPeriod = periodMap[analyticsPeriod];
