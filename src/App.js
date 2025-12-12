@@ -173,9 +173,9 @@ function App() {
     const f = { ...def, ...(raw || {}) };
     const pick = (k) => VALID[k].includes(f[k]) ? f[k] : def[k];
     const idOrAll = (val) => {
-      if (val === undefined || val === null || val === '' || val === 'all') return 'all';
-      const num = Number(val);
-      return Number.isFinite(num) ? String(num) : 'all';
+      if (val === undefined || val === null) return 'all';
+      const str = String(val).trim();
+      return str === '' || str === 'all' ? 'all' : str;
     };
     return {
       status: pick('status'),
@@ -275,9 +275,9 @@ function App() {
       if (filters.type !== 'all') params.set('type', filters.type);
       if (filters.level !== 'all') params.set('level', Number(filters.level));
       if (filters.channel !== 'all') params.set('channel', filters.channel);
-      if (filters.created_by !== 'all') params.set('created_by', Number(filters.created_by));
-      if (filters.assigned_by !== 'all') params.set('assigned_by', Number(filters.assigned_by));
-      if (filters.assigned_to !== 'all') params.set('assigned_to', Number(filters.assigned_to));
+      if (filters.created_by !== 'all') params.set('created_by', filters.created_by);
+      if (filters.assigned_by !== 'all') params.set('assigned_by', filters.assigned_by);
+      if (filters.assigned_to !== 'all') params.set('assigned_to', filters.assigned_to);
 
       const { data } = await api.get(`/requests?${params.toString()}`);
       setRequests(data.items || []);

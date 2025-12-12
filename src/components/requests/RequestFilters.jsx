@@ -29,11 +29,6 @@ const RequestFilters = ({ filters, setFilters, departments, setPage, users = [] 
   const assignerOptions = users;
   const assigneeOptions = users;
 
-  // Opciones para "Asignado a": generalmente técnicos o administradores
-  const assigneeOptions = Array.isArray(users)
-    ? users.filter(u => !u.role || u.role === 'support' || u.role === 'admin')
-    : [];
-
   const userLabel = (u) => u?.full_name || u?.username || `Usuario ${u?.id}`;
 
   return (
