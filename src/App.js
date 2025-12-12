@@ -263,6 +263,11 @@ function App() {
     fetchUsers();
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    fetchUsers();
+  }, [user]);
+
   /* ===========================
             API calls
      =========================== */
