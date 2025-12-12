@@ -10,11 +10,18 @@ const isLocal =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-const ENV_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ??
-  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL) ??
-  (typeof window !== 'undefined' && window.__API_URL) ??
-  (isLocal ? 'http://localhost:8000' : '');
+const ENV_URL = (() => {
+  if (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL) {
+    return process.env.REACT_APP_BACKEND_URL;
+  }
+
+  if (typeof window !== 'undefined') {
+    const globals = window.__API_URL || window.API_URL || window.BACKEND_URL;
+    if (globals) return globals;
+  }
+
+  return isLocal ? 'http://localhost:8000' : '';
+})();
 
 // En local usamos URL explícita; en prod usamos el proxy /api (definido en netlify.toml)
 const baseURL = isLocal ? `${ENV_URL.replace(/\/+$/, '')}/api` : '/api';
