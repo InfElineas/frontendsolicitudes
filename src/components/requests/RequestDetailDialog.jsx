@@ -4,17 +4,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { notifyAuthExpired } from '@/utils/session';
 
 /* -------------------- BASE URL robusto (Vite/CRA + proxy Netlify) -------------------- */
 const isLocal =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-const ENV_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ??
-  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL) ??
-  (typeof window !== 'undefined' && window.__API_URL) ??
-  (isLocal ? 'http://localhost:8000' : '');
+const ENV_URL = (() => {
+  if (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL) {
+    return process.env.REACT_APP_BACKEND_URL;
+  }
+
+  if (typeof window !== 'undefined') {
+    const globals = window.__API_URL || window.API_URL || window.BACKEND_URL;
+    if (globals) return globals;
+  }
+
+  return isLocal ? 'http://localhost:8000' : '';
+})();
 
 // En local usamos URL explícita; en prod usamos el proxy /api (definido en netlify.toml)
 const baseURL = isLocal ? `${ENV_URL.replace(/\/+$/, '')}/api` : '/api';
@@ -111,8 +119,10 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
       .catch(e => {
         if (axios.isCancel(e)) return;
         const status = e?.response?.status;
-        if (status === 401) setErr('No autenticado. Inicia sesión nuevamente.');
-        else if (status === 403) setErr('No autorizado para ver esta solicitud.');
+        if (status === 401) {
+          notifyAuthExpired();
+          setErr('No autenticado. Inicia sesión nuevamente.');
+        } else if (status === 403) setErr('No autorizado para ver esta solicitud.');
         else if (status === 404) setErr('Solicitud no encontrada.');
         else setErr(e?.response?.data?.detail || e.message);
       })
@@ -123,7 +133,7 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl sm:max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalle de la solicitud</DialogTitle>
         </DialogHeader>
@@ -134,8 +144,8 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
         {data && !loading && !err && (
           <div className="space-y-4">
             {/* Header */}
-            <div className="flex items-start justify-between gap-3">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div className="space-y-1">
                 <div className="text-lg font-semibold">{data.title}</div>
                 <div className="text-sm text-gray-600">
                   {(data.requester_name || data.requested_by?.name || '-')}{' • '}
@@ -143,21 +153,21 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
                   {fmt(data.created_at)}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap justify-end">
                 <Badge className={colorPri(data.priority)}>{data.priority || '-'}</Badge>
                 <Badge className={colorStatus(data.status)}>{data.status || '-'}</Badge>
               </div>
             </div>
 
             <Tabs value={tab} onValueChange={setTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2">
                 <TabsTrigger value="overview">Resumen</TabsTrigger>
                 <TabsTrigger value="history">Historial</TabsTrigger>
                 <TabsTrigger value="worklogs">Worklogs</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                   <Field label="Tipo" value={data.type} />
                   <Field label="Canal" value={data.channel} />
                   <Field label="Nivel" value={data.level ?? '-'} />
