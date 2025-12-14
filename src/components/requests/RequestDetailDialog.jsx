@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -67,6 +67,43 @@ const colorPri = (p) => ({
 
 const fmt = (d) => { try { return d ? new Date(d).toLocaleString() : '-'; } catch { return d || '-'; } };
 
+export const deriveHistory = (data) => {
+  const baseHistory = Array.isArray(data?.history) ? data.history : [];
+  const knownTimestampKeys = [
+    { key: 'created_at', label: 'Creado' },
+    { key: 'requested_at', label: 'Solicitado' },
+    { key: 'assigned_at', label: 'Asignado' },
+    { key: 'in_progress_at', label: 'En progreso' },
+    { key: 'in_review_at', label: 'En revisión' },
+    { key: 'finished_at', label: 'Finalizada' },
+    { key: 'rejected_at', label: 'Rechazada' },
+    { key: 'closed_at', label: 'Cerrada' },
+    { key: 'updated_at', label: 'Actualizado' },
+  ];
+
+  const timeline = [...baseHistory];
+
+  // Soportamos estructuras tipo { status: fecha }
+  const statusMap = data && typeof data === 'object' && !Array.isArray(data)
+    ? data.status_history || data.status_timestamps || data.status_dates
+    : null;
+
+  if (statusMap && typeof statusMap === 'object') {
+    Object.entries(statusMap).forEach(([status, at]) => {
+      if (at) timeline.push({ at, from: null, to: status });
+    });
+  }
+
+  knownTimestampKeys.forEach(({ key, label }) => {
+    const value = data?.[key];
+    if (value) timeline.push({ at: value, from: null, to: label });
+  });
+
+  return timeline
+    .filter((entry) => entry && (entry.at || entry.to))
+    .sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
+};
+
 function Field({ label, value }) {
   return (
     <div>
@@ -78,7 +115,7 @@ function Field({ label, value }) {
 
 function Table({ headers, rows }) {
   return (
-    <div className="max-h-64 overflow-auto rounded-lg border">
+    <div className="max-h-64 overflow-auto rounded-lg border overflow-x-auto">
       <table className="w-full text-left text-sm">
         <thead className="bg-gray-50">
           <tr>{headers.map(h => <th key={h} className="px-3 py-2 font-medium text-gray-700">{h}</th>)}</tr>
@@ -102,6 +139,7 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
   const abortRef = useRef(null);
+  const historyRows = useMemo(() => deriveHistory(data), [data]);
 
   useEffect(() => {
     if (!open || !requestId) return;
@@ -133,7 +171,7 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl sm:max-w-4xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] sm:w-auto max-w-3xl sm:max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalle de la solicitud</DialogTitle>
         </DialogHeader>
@@ -189,7 +227,7 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
               <TabsContent value="history">
                 <Table
                   headers={['Fecha','De → A','Por','Nota']}
-                  rows={(data.history || []).map(h => [
+                  rows={historyRows.map(h => [
                     fmt(h.at),
                     h.from ? `${h.from} → ${h.to}` : (h.to || '-'),
                     h.by || '-',

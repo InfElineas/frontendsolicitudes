@@ -241,6 +241,19 @@ function App() {
   const [reviewDialog, setReviewDialog] = useState({ open: false, id: null, link: '' });
   const departments = VALID.department.filter(d => d !== 'all');
 
+  const logout = useCallback((message) => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    sessionStorage.removeItem('access_token');
+    setActiveTab('requests');
+    setAuthChecked(true);
+    if (message) toast.error(message);
+    else toast.success('Sesión cerrada');
+  }, []);
+
   /* ===========================
              Effects
      =========================== */
@@ -376,19 +389,6 @@ function App() {
     }
     setLoading(false);
   };
-
-  const logout = useCallback((message) => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-    sessionStorage.removeItem('token');
-    localStorage.removeItem('access_token');
-    sessionStorage.removeItem('access_token');
-    setActiveTab('requests');
-    setAuthChecked(true);
-    if (message) toast.error(message);
-    else toast.success('Sesión cerrada');
-  }, []);
 
   // Crear solicitud
   const createRequest = async (e) => {
