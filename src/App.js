@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import './App.css';
 import axios from 'axios';
+import { AUTH_EXPIRED_EVENT, notifyAuthExpired } from './utils/session';
 
 import {
   Dialog,
@@ -96,12 +97,8 @@ api.interceptors.response.use(
       }
     }
 
-    if (err?.response?.status === 401) {
-      localStorage.removeItem('token');
-      if (!cfg?.url?.includes('/auth/login')) {
-        toast.error('Tu sesión expiró. Inicia sesión nuevamente.');
-        setTimeout(() => window.location.reload(), 800);
-      }
+    if (err?.response?.status === 401 && !cfg?.url?.includes('/auth/login')) {
+      notifyAuthExpired();
     }
     return Promise.reject(err);
   }
@@ -114,6 +111,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // pestaña activa (persistente)
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('activeTab') || 'requests');
@@ -246,7 +244,27 @@ function App() {
   /* ===========================
              Effects
      =========================== */
-  useEffect(() => { if (token) fetchCurrentUser(); }, [token]);
+  useEffect(() => {
+    const onExpired = (ev) => logout(ev?.detail?.message || 'Tu sesión expiró. Inicia sesión nuevamente.');
+    if (typeof window !== 'undefined') {
+      window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
+      }
+    };
+  }, [logout]);
+
+  useEffect(() => {
+    if (!token) {
+      setUser(null);
+      setAuthChecked(true);
+      return;
+    }
+    setAuthChecked(false);
+    fetchCurrentUser();
+  }, [token]);
 
   useEffect(() => {
     if (!user) return;
@@ -266,14 +284,19 @@ function App() {
   /* ===========================
             API calls
      =========================== */
+  const isUnauthorized = (error) => error?.response?.status === 401;
+
   const fetchCurrentUser = async () => {
     try {
       const { data } = await api.get('/auth/me');
       setUser(data);
     } catch (error) {
       console.error('Error fetching user:', error);
-      logout();
+      if (!isUnauthorized(error)) {
+        logout('No se pudo validar tu sesión. Inicia sesión nuevamente.');
+      }
     }
+    setAuthChecked(true);
   };
 
   const fetchRequests = async () => {
@@ -298,6 +321,7 @@ function App() {
       setTotalPages(data.total_pages || 1);
     } catch (error) {
       console.error('Error fetching requests:', error?.response || error);
+      if (isUnauthorized(error)) return;
       toast.error('Error al cargar solicitudes');
       setRequests([]);
       setTotal(0);
@@ -311,6 +335,7 @@ function App() {
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
+      if (isUnauthorized(error)) return;
       toast.error('Error al cargar usuarios');
     }
   };
@@ -326,6 +351,7 @@ function App() {
       setAnalytics(data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
+      if (isUnauthorized(error)) return;
       toast.error('Error al cargar análisis');
     }
   };
@@ -341,6 +367,7 @@ function App() {
       );
       const { access_token } = data;
       localStorage.setItem('token', access_token);
+      setAuthChecked(false);
       setToken(access_token);
       toast.success('¡Bienvenido!');
     } catch (error) {
@@ -350,13 +377,18 @@ function App() {
     setLoading(false);
   };
 
-  const logout = () => {
+  const logout = useCallback((message) => {
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    sessionStorage.removeItem('access_token');
     setActiveTab('requests');
-    toast.success('Sesión cerrada');
-  };
+    setAuthChecked(true);
+    if (message) toast.error(message);
+    else toast.success('Sesión cerrada');
+  }, []);
 
   // Crear solicitud
   const createRequest = async (e) => {
@@ -565,6 +597,14 @@ function App() {
   /* ===========================
                UI
      =========================== */
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="text-sm text-gray-600">Validando sesión…</div>
+      </div>
+    );
+  }
+
   if (!token) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -617,7 +657,7 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
             <TabsTrigger value="requests" className="flex items-center space-x-2">
               <FileText className="h-4 w-4" />
               <span>Solicitudes</span>
