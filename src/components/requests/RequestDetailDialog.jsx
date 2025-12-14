@@ -1,20 +1,28 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { notifyAuthExpired } from '@/utils/session';
 
 /* -------------------- BASE URL robusto (Vite/CRA + proxy Netlify) -------------------- */
 const isLocal =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-const ENV_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) ??
-  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL) ??
-  (typeof window !== 'undefined' && window.__API_URL) ??
-  (isLocal ? 'http://localhost:8000' : '');
+const ENV_URL = (() => {
+  if (typeof process !== 'undefined' && process.env && process.env.REACT_APP_BACKEND_URL) {
+    return process.env.REACT_APP_BACKEND_URL;
+  }
+
+  if (typeof window !== 'undefined') {
+    const globals = window.__API_URL || window.API_URL || window.BACKEND_URL;
+    if (globals) return globals;
+  }
+
+  return isLocal ? 'http://localhost:8000' : '';
+})();
 
 // En local usamos URL explícita; en prod usamos el proxy /api (definido en netlify.toml)
 const baseURL = isLocal ? `${ENV_URL.replace(/\/+$/, '')}/api` : '/api';
@@ -59,6 +67,43 @@ const colorPri = (p) => ({
 
 const fmt = (d) => { try { return d ? new Date(d).toLocaleString() : '-'; } catch { return d || '-'; } };
 
+export const deriveHistory = (data) => {
+  const baseHistory = Array.isArray(data?.history) ? data.history : [];
+  const knownTimestampKeys = [
+    { key: 'created_at', label: 'Creado' },
+    { key: 'requested_at', label: 'Solicitado' },
+    { key: 'assigned_at', label: 'Asignado' },
+    { key: 'in_progress_at', label: 'En progreso' },
+    { key: 'in_review_at', label: 'En revisión' },
+    { key: 'finished_at', label: 'Finalizada' },
+    { key: 'rejected_at', label: 'Rechazada' },
+    { key: 'closed_at', label: 'Cerrada' },
+    { key: 'updated_at', label: 'Actualizado' },
+  ];
+
+  const timeline = [...baseHistory];
+
+  // Soportamos estructuras tipo { status: fecha }
+  const statusMap = data && typeof data === 'object' && !Array.isArray(data)
+    ? data.status_history || data.status_timestamps || data.status_dates
+    : null;
+
+  if (statusMap && typeof statusMap === 'object') {
+    Object.entries(statusMap).forEach(([status, at]) => {
+      if (at) timeline.push({ at, from: null, to: status });
+    });
+  }
+
+  knownTimestampKeys.forEach(({ key, label }) => {
+    const value = data?.[key];
+    if (value) timeline.push({ at: value, from: null, to: label });
+  });
+
+  return timeline
+    .filter((entry) => entry && (entry.at || entry.to))
+    .sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
+};
+
 function Field({ label, value }) {
   return (
     <div>
@@ -70,7 +115,7 @@ function Field({ label, value }) {
 
 function Table({ headers, rows }) {
   return (
-    <div className="max-h-64 overflow-auto rounded-lg border">
+    <div className="max-h-64 overflow-auto rounded-lg border overflow-x-auto">
       <table className="w-full text-left text-sm">
         <thead className="bg-gray-50">
           <tr>{headers.map(h => <th key={h} className="px-3 py-2 font-medium text-gray-700">{h}</th>)}</tr>
@@ -94,6 +139,7 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
   const abortRef = useRef(null);
+  const historyRows = useMemo(() => deriveHistory(data), [data]);
 
   useEffect(() => {
     if (!open || !requestId) return;
@@ -111,8 +157,10 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
       .catch(e => {
         if (axios.isCancel(e)) return;
         const status = e?.response?.status;
-        if (status === 401) setErr('No autenticado. Inicia sesión nuevamente.');
-        else if (status === 403) setErr('No autorizado para ver esta solicitud.');
+        if (status === 401) {
+          notifyAuthExpired();
+          setErr('No autenticado. Inicia sesión nuevamente.');
+        } else if (status === 403) setErr('No autorizado para ver esta solicitud.');
         else if (status === 404) setErr('Solicitud no encontrada.');
         else setErr(e?.response?.data?.detail || e.message);
       })
@@ -123,7 +171,7 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="w-[95vw] sm:w-auto max-w-3xl sm:max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalle de la solicitud</DialogTitle>
         </DialogHeader>
@@ -134,8 +182,8 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
         {data && !loading && !err && (
           <div className="space-y-4">
             {/* Header */}
-            <div className="flex items-start justify-between gap-3">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div className="space-y-1">
                 <div className="text-lg font-semibold">{data.title}</div>
                 <div className="text-sm text-gray-600">
                   {(data.requester_name || data.requested_by?.name || '-')}{' • '}
@@ -143,21 +191,21 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
                   {fmt(data.created_at)}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap justify-end">
                 <Badge className={colorPri(data.priority)}>{data.priority || '-'}</Badge>
                 <Badge className={colorStatus(data.status)}>{data.status || '-'}</Badge>
               </div>
             </div>
 
             <Tabs value={tab} onValueChange={setTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-2">
                 <TabsTrigger value="overview">Resumen</TabsTrigger>
                 <TabsTrigger value="history">Historial</TabsTrigger>
                 <TabsTrigger value="worklogs">Worklogs</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                   <Field label="Tipo" value={data.type} />
                   <Field label="Canal" value={data.channel} />
                   <Field label="Nivel" value={data.level ?? '-'} />
@@ -179,7 +227,7 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
               <TabsContent value="history">
                 <Table
                   headers={['Fecha','De → A','Por','Nota']}
-                  rows={(data.history || []).map(h => [
+                  rows={historyRows.map(h => [
                     fmt(h.at),
                     h.from ? `${h.from} → ${h.to}` : (h.to || '-'),
                     h.by || '-',

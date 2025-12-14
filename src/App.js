@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import './App.css';
 import axios from 'axios';
+import { AUTH_EXPIRED_EVENT, notifyAuthExpired } from './utils/session';
 
 import {
   Dialog,
@@ -48,11 +49,20 @@ const isLocal =
   typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-// Leemos primero Vite, luego CRA, luego fallback local
-const RAW_BACKEND =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
-  (typeof process !== 'undefined' && process.env?.REACT_APP_BACKEND_URL) ||
-  (isLocal ? 'http://localhost:8000' : '');
+// URL de backend (evitamos import.meta para no requerir <script type="module">)
+const RAW_BACKEND = (() => {
+  if (typeof process !== 'undefined' && process.env?.REACT_APP_BACKEND_URL) {
+    return process.env.REACT_APP_BACKEND_URL;
+  }
+
+  if (typeof window !== 'undefined') {
+    // Opciones para despliegues con variables globales inyectadas
+    const globals = window.__API_URL || window.API_URL || window.BACKEND_URL;
+    if (globals) return globals;
+  }
+
+  return isLocal ? 'http://localhost:8000' : '';
+})();
 
 // Normalizamos
 const API_BASE = RAW_BACKEND
@@ -87,12 +97,8 @@ api.interceptors.response.use(
       }
     }
 
-    if (err?.response?.status === 401) {
-      localStorage.removeItem('token');
-      if (!cfg?.url?.includes('/auth/login')) {
-        toast.error('Tu sesión expiró. Inicia sesión nuevamente.');
-        setTimeout(() => window.location.reload(), 800);
-      }
+    if (err?.response?.status === 401 && !cfg?.url?.includes('/auth/login')) {
+      notifyAuthExpired();
     }
     return Promise.reject(err);
   }
@@ -105,6 +111,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // pestaña activa (persistente)
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('activeTab') || 'requests');
@@ -139,7 +146,7 @@ function App() {
       'Punto de Venta','Almacén','Picker and Packer','Estibadores'
     ],
     type: ['all','Soporte','Mejora','Desarrollo','Capacitación'],
-    level: ['all','1 (simple/capacitación)','2 (soporte/correcciones)','3 (desarrollo/automatización)'],
+    level: ['all','1','2','3'],
     channel: ['all','Sistema','Google Sheets','Correo Electrónico','WhatsApp'],
     sort: [
       '-created_at','created_at','-requested_at','requested_at',
@@ -150,11 +157,24 @@ function App() {
 
   const sanitizeFilters = (raw) => {
     const def = {
-      status: 'all', department: 'all', type: 'all', level: 'all',
-      channel: 'all', q: '', sort: '-created_at',created_by: 'all', assigned_by: 'all'  
+      status: 'all',
+      department: 'all',
+      type: 'all',
+      level: 'all',
+      channel: 'all',
+      q: '',
+      sort: '-created_at',
+      created_by: 'all',
+      assigned_by: 'all',
+      assigned_to: 'all'
     };
     const f = { ...def, ...(raw || {}) };
     const pick = (k) => VALID[k].includes(f[k]) ? f[k] : def[k];
+    const idOrAll = (val) => {
+      if (val === undefined || val === null) return 'all';
+      const str = String(val).trim();
+      return str === '' || str === 'all' ? 'all' : str;
+    };
     return {
       status: pick('status'),
       department: pick('department'),
@@ -163,6 +183,9 @@ function App() {
       channel: pick('channel'),
       q: typeof f.q === 'string' ? f.q : '',
       sort: pick('sort'),
+      created_by: idOrAll(f.created_by),
+      assigned_by: idOrAll(f.assigned_by),
+      assigned_to: idOrAll(f.assigned_to),
     };
   };
 
@@ -195,8 +218,17 @@ function App() {
 
   // analytics
   const [analytics, setAnalytics] = useState(null);
-  const [analyticsPeriod, setAnalyticsPeriod] = useState(() => localStorage.getItem('analyticsPeriod') || 'month');
+  const [analyticsPeriod, setAnalyticsPeriod] = useState(() => localStorage.getItem('analyticsPeriod') || 'all');
+  const [analyticsFilters, setAnalyticsFilters] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('analyticsFilters'));
+      return stored || { technician: 'all', department: 'all' };
+    } catch (e) {
+      return { technician: 'all', department: 'all' };
+    }
+  });
   useEffect(() => { localStorage.setItem('analyticsPeriod', analyticsPeriod); }, [analyticsPeriod]);
+  useEffect(() => { localStorage.setItem('analyticsFilters', JSON.stringify(analyticsFilters)); }, [analyticsFilters]);
 
   // diálogos/acciones
   const [classifyDialogFor, setClassifyDialogFor] = useState(null);
@@ -209,36 +241,75 @@ function App() {
   const [reviewDialog, setReviewDialog] = useState({ open: false, id: null, link: '' });
   const departments = VALID.department.filter(d => d !== 'all');
 
+  const logout = useCallback((message) => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    sessionStorage.removeItem('access_token');
+    setActiveTab('requests');
+    setAuthChecked(true);
+    if (message) toast.error(message);
+    else toast.success('Sesión cerrada');
+  }, []);
+
   /* ===========================
              Effects
      =========================== */
-  useEffect(() => { if (token) fetchCurrentUser(); }, [token]);
+  useEffect(() => {
+    const onExpired = (ev) => logout(ev?.detail?.message || 'Tu sesión expiró. Inicia sesión nuevamente.');
+    if (typeof window !== 'undefined') {
+      window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
+      }
+    };
+  }, [logout]);
+
+  useEffect(() => {
+    if (!token) {
+      setUser(null);
+      setAuthChecked(true);
+      return;
+    }
+    setAuthChecked(false);
+    fetchCurrentUser();
+  }, [token]);
 
   useEffect(() => {
     if (!user) return;
     fetchRequests();
-    if (user.role === 'admin') fetchUsers();
-    if (user.role === 'support' || user.role === 'admin') fetchAnalytics();
-    if (filters.created_by && filters.created_by !== 'all') {
-  params.set('created_by', Number(filters.created_by));
-}
-if (filters.assigned_by && filters.assigned_by !== 'all') {
-  params.set('assigned_by', Number(filters.assigned_by));
-}
+  }, [user, page, pageSize, filters]);
 
-  }, [user, analyticsPeriod, page, pageSize, filters]);
+  useEffect(() => {
+    if (!user) return;
+    if (user.role === 'support' || user.role === 'admin') fetchAnalytics();
+  }, [user, analyticsPeriod]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchUsers();
+  }, [user]);
 
   /* ===========================
             API calls
      =========================== */
+  const isUnauthorized = (error) => error?.response?.status === 401;
+
   const fetchCurrentUser = async () => {
     try {
       const { data } = await api.get('/auth/me');
       setUser(data);
     } catch (error) {
       console.error('Error fetching user:', error);
-      logout();
+      if (!isUnauthorized(error)) {
+        logout('No se pudo validar tu sesión. Inicia sesión nuevamente.');
+      }
     }
+    setAuthChecked(true);
   };
 
   const fetchRequests = async () => {
@@ -253,6 +324,9 @@ if (filters.assigned_by && filters.assigned_by !== 'all') {
       if (filters.type !== 'all') params.set('type', filters.type);
       if (filters.level !== 'all') params.set('level', Number(filters.level));
       if (filters.channel !== 'all') params.set('channel', filters.channel);
+      if (filters.created_by !== 'all') params.set('created_by', filters.created_by);
+      if (filters.assigned_by !== 'all') params.set('assigned_by', filters.assigned_by);
+      if (filters.assigned_to !== 'all') params.set('assigned_to', filters.assigned_to);
 
       const { data } = await api.get(`/requests?${params.toString()}`);
       setRequests(data.items || []);
@@ -260,6 +334,7 @@ if (filters.assigned_by && filters.assigned_by !== 'all') {
       setTotalPages(data.total_pages || 1);
     } catch (error) {
       console.error('Error fetching requests:', error?.response || error);
+      if (isUnauthorized(error)) return;
       toast.error('Error al cargar solicitudes');
       setRequests([]);
       setTotal(0);
@@ -273,6 +348,7 @@ if (filters.assigned_by && filters.assigned_by !== 'all') {
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
+      if (isUnauthorized(error)) return;
       toast.error('Error al cargar usuarios');
     }
   };
@@ -280,11 +356,15 @@ if (filters.assigned_by && filters.assigned_by !== 'all') {
   const periodMap = { day: 'daily', week: 'weekly', month: 'monthly' };
   const fetchAnalytics = async () => {
     try {
-      const period = periodMap[analyticsPeriod] || 'monthly';
-      const { data } = await api.get(`/reports/summary?period=${period}`);
+      const mappedPeriod = periodMap[analyticsPeriod];
+      const baseUrl = '/reports/summary';
+      const params = new URLSearchParams();
+      if (mappedPeriod) params.set('period', mappedPeriod);
+      const { data } = await api.get(params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl);
       setAnalytics(data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
+      if (isUnauthorized(error)) return;
       toast.error('Error al cargar análisis');
     }
   };
@@ -300,6 +380,7 @@ if (filters.assigned_by && filters.assigned_by !== 'all') {
       );
       const { access_token } = data;
       localStorage.setItem('token', access_token);
+      setAuthChecked(false);
       setToken(access_token);
       toast.success('¡Bienvenido!');
     } catch (error) {
@@ -307,14 +388,6 @@ if (filters.assigned_by && filters.assigned_by !== 'all') {
       toast.error(error?.response?.data?.detail || 'Credenciales incorrectas');
     }
     setLoading(false);
-  };
-
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-    setActiveTab('requests');
-    toast.success('Sesión cerrada');
   };
 
   // Crear solicitud
@@ -524,6 +597,14 @@ if (filters.assigned_by && filters.assigned_by !== 'all') {
   /* ===========================
                UI
      =========================== */
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="text-sm text-gray-600">Validando sesión…</div>
+      </div>
+    );
+  }
+
   if (!token) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -576,7 +657,7 @@ if (filters.assigned_by && filters.assigned_by !== 'all') {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
             <TabsTrigger value="requests" className="flex items-center space-x-2">
               <FileText className="h-4 w-4" />
               <span>Solicitudes</span>
@@ -652,6 +733,10 @@ if (filters.assigned_by && filters.assigned_by !== 'all') {
                 analytics={analytics}
                 analyticsPeriod={analyticsPeriod}
                 setAnalyticsPeriod={setAnalyticsPeriod}
+                analyticsFilters={analyticsFilters}
+                setAnalyticsFilters={setAnalyticsFilters}
+                users={users}
+                departments={departments}
               />
             </TabsContent>
           )}
