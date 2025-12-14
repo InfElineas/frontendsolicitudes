@@ -1,4 +1,11 @@
-import { buildRanking, computeGlobalMetrics, filterProductivityRows, normalizeProductivityRows } from './analyticsUtils';
+import {
+  buildPeriodParams,
+  buildRanking,
+  computeGlobalMetrics,
+  filterProductivityRows,
+  normalizeProductivityRows,
+  pickProductivityRows,
+} from './analyticsUtils';
 
 describe('analyticsUtils', () => {
   const sample = [
@@ -125,6 +132,26 @@ describe('analyticsUtils', () => {
 
     expect(globalAll.finished).toBeGreaterThanOrEqual(globalMonth.finished);
     expect(globalAll.assigned).toBeGreaterThanOrEqual(globalMonth.assigned);
+  });
+
+  test('pickProductivityRows falls back to all-time sets', () => {
+    const analytics = {
+      productivity_by_tech: [],
+      all_time_productivity: [{ user_id: 1 }],
+    };
+    const rows = pickProductivityRows(analytics, 'all');
+    expect(rows).toHaveLength(1);
+  });
+
+  test('buildPeriodParams constructs consistent ranges', () => {
+    const fixedDate = new Date('2024-06-15T12:00:00Z');
+    const all = buildPeriodParams('all', fixedDate);
+    expect(all.get('range')).toBe('all');
+
+    const month = buildPeriodParams('month', fixedDate);
+    expect(month.get('period')).toBe('monthly');
+    expect(month.get('start_date')).toBeDefined();
+    expect(month.get('end_date')).toBeDefined();
   });
 });
 

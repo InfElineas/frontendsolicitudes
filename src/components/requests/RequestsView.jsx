@@ -204,7 +204,7 @@ const RequestsView = ({
       />
 
       {/* Lista de solicitudes */}
-      <div className="grid gap-4">
+      <div className="grid gap-4 grid-cols-1 xl:grid-cols-2">
         {requests.length === 0 ? (
           <div className="text-center text-gray-500 py-12 bg-white rounded-lg border">
             No hay solicitudes que coincidan con el filtro.

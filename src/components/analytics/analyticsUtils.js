@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { startOfDay, subDays, subMonths, subWeeks } from 'date-fns';
 
 // Normaliza llaves de estado que llegan desde el backend para agruparlas en las
 // columnas del dashboard. Se soportan mayúsculas/minúsculas y variantes en
@@ -28,6 +29,43 @@ const STATUS_KEYS = {
   done: 'finished',
   completada: 'finished',
   completadas: 'finished',
+};
+
+export const buildPeriodParams = (period = 'all', now = new Date()) => {
+  const params = new URLSearchParams();
+  const today = startOfDay(now);
+  if (period === 'day') {
+    params.set('period', 'daily');
+    params.set('start_date', subDays(today, 1).toISOString());
+    params.set('end_date', today.toISOString());
+  } else if (period === 'week') {
+    params.set('period', 'weekly');
+    params.set('start_date', subWeeks(today, 1).toISOString());
+    params.set('end_date', today.toISOString());
+  } else if (period === 'month') {
+    params.set('period', 'monthly');
+    params.set('start_date', subMonths(today, 1).toISOString());
+    params.set('end_date', today.toISOString());
+  } else {
+    params.set('range', 'all');
+  }
+  return params;
+};
+
+export const pickProductivityRows = (analytics = {}, period = 'all') => {
+  const candidates = [];
+  if (period === 'all') {
+    candidates.push(
+      analytics.all_time_productivity,
+      analytics.productivity_all,
+      analytics.productivity_total,
+      analytics.all_productivity,
+    );
+  }
+  candidates.push(analytics.productivity_by_tech, analytics.productivity);
+
+  const dataset = candidates.find((arr) => Array.isArray(arr) && arr.length > 0);
+  return dataset || [];
 };
 
 const coalesce = (...values) => values.find((v) => Number.isFinite(Number(v))) ?? 0;
@@ -146,13 +184,14 @@ export const computeGlobalMetrics = (rows = []) => {
   };
 };
 
-export const useProductivity = (analytics, filters) => {
+export const useProductivity = (analytics, filters, period = 'all') => {
   return useMemo(() => {
-    const normalized = normalizeProductivityRows(analytics?.productivity_by_tech || []);
+    const source = pickProductivityRows(analytics, period);
+    const normalized = normalizeProductivityRows(source || []);
     const filtered = filterProductivityRows(normalized, filters);
     const global = computeGlobalMetrics(filtered);
     const ranking = buildRanking(filtered);
     return { normalized, filtered, global, ranking };
-  }, [analytics, filters]);
+  }, [analytics, filters, period]);
 };
 

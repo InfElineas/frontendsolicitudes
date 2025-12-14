@@ -16,7 +16,7 @@ function AnalyticsView({
   users = [],
   departments = [],
 }) {
-  const { filtered, global, ranking } = useProductivity(analytics, analyticsFilters);
+  const { filtered, global, ranking } = useProductivity(analytics, analyticsFilters, analyticsPeriod);
 
   const maxFinished = useMemo(() => Math.max(...filtered.map((row) => Number(row.finished) || 0), 0), [filtered]);
   const maxTotal = useMemo(() => Math.max(

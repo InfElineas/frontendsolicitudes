@@ -13,6 +13,7 @@ import {
 } from './components/ui/dialog';
 
 import AnalyticsView from './components/analytics/AnalyticsView';
+import { buildPeriodParams } from './components/analytics/analyticsUtils';
 import DepartmentsView from './components/departaments/DepartmentsView.jsx';
 import UsersView from './components/users/UsersView';
 import HeaderBar from './components/layouts/HeaderBar.jsx';
@@ -353,16 +354,27 @@ function App() {
     }
   };
 
-  const periodMap = { all: 'all', day: 'daily', week: 'weekly', month: 'monthly' };
   const fetchAnalytics = async () => {
     try {
-      const mappedPeriod = periodMap[analyticsPeriod];
+      const params = buildPeriodParams(analyticsPeriod);
       const baseUrl = '/reports/summary';
-      const params = new URLSearchParams();
-      if (mappedPeriod) params.set('period', mappedPeriod);
-      const { data } = await api.get(params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl);
-      setAnalytics(data);
+      const qs = params.toString();
+      const requestUrl = qs ? `${baseUrl}?${qs}` : baseUrl;
+      const { data } = await api.get(requestUrl);
+      setAnalytics({ ...data, _period: analyticsPeriod });
     } catch (error) {
+      // En algunos despliegues el backend no acepta range=all. Reintentamos sin parámetros.
+      if (analyticsPeriod === 'all' && error?.response?.status === 422) {
+        try {
+          const { data } = await api.get('/reports/summary');
+          setAnalytics({ ...data, _period: analyticsPeriod });
+          return;
+        } catch (fallbackError) {
+          console.error('Error fetching analytics fallback:', fallbackError);
+          if (!isUnauthorized(fallbackError)) toast.error('Error al cargar análisis');
+          return;
+        }
+      }
       console.error('Error fetching analytics:', error);
       if (isUnauthorized(error)) return;
       toast.error('Error al cargar análisis');
@@ -607,44 +619,66 @@ function App() {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-gray-900">Sistema de Solicitudes</CardTitle>
-            <CardDescription>Inicia sesión para continuar</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={login} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Usuario</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  value={loginData.username}
-                  onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-                  required
-                />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-5 gap-6">
+          <Card className="lg:col-span-2 bg-white/70 backdrop-blur shadow-sm border border-indigo-50">
+            <CardHeader className="space-y-2">
+              <CardTitle className="text-2xl font-bold text-gray-900">Sistema de Solicitudes</CardTitle>
+              <CardDescription className="text-sm text-gray-700">
+                Gestiona, asigna y da seguimiento a las solicitudes con una interfaz optimizada para cualquier dispositivo.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-gray-600 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-green-500" /> Sesión segura y control de tiempo de inactividad.
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={loginData.password}
-                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                  required
-                />
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-blue-500" /> Experiencia responsiva en móvil, tablet y desktop.
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
-              </Button>
-            </form>
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs font-normal text-gray-700 mb-2">Plataforma desarrollada por el grupo de Soporte de Elineas</p>
-              <div className="text-xs text-gray-600 space-y-1"></div>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-purple-500" /> Paneles de métricas en tiempo real.
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-3 shadow-sm">
+            <CardHeader className="text-center space-y-1">
+              <CardTitle className="text-2xl font-bold text-gray-900">Inicia sesión</CardTitle>
+              <CardDescription>Accede con tus credenciales corporativas.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={login} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Usuario</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    value={loginData.username}
+                    onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={loginData.password}
+                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+                </Button>
+              </form>
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg text-left">
+                <p className="text-xs font-normal text-gray-700 mb-1">Plataforma desarrollada por el equipo de Soporte.</p>
+                <p className="text-xs text-gray-600">Si tu sesión expira, volverás automáticamente a esta pantalla para mantener la seguridad.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
