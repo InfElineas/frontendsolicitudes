@@ -17,13 +17,14 @@ import { buildPeriodParams } from './components/analytics/analyticsUtils';
 import DepartmentsView from './components/departaments/DepartmentsView.jsx';
 import UsersView from './components/users/UsersView';
 import HeaderBar from './components/layouts/HeaderBar.jsx';
+import NavigationTabs from './components/layouts/NavigationTabs.jsx';
 import AssignDialog from './components/requests/AssignDialog';
 
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { Label } from './components/ui/label';
 import { Badge } from './components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
+import { Tabs, TabsContent } from './components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
 import { Textarea } from './components/ui/textarea';
 import { toast } from 'sonner';
@@ -691,38 +692,11 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-            <TabsTrigger value="requests" className="flex items-center space-x-2">
-              <FileText className="h-4 w-4" />
-              <span>Solicitudes</span>
-            </TabsTrigger>
-            {(user?.role === 'support' || user?.role === 'admin') && (
-              <TabsTrigger value="analytics" className="flex items-center space-x-2">
-                <BarChart3 className="h-4 w-4" />
-                <span>Análisis</span>
-              </TabsTrigger>
-            )}
-
-            {user?.role === 'admin' && (
-              <TabsTrigger value="trash" className="flex items-center space-x-2">
-                <FileText className="h-4 w-4" />
-                <span>Papelera</span>
-              </TabsTrigger>
-            )}
-
-            {user?.role === 'admin' && (
-              <>
-                <TabsTrigger value="users" className="flex items-center space-x-2">
-                  <Users className="h-4 w-4" />
-                  <span>Usuarios</span>
-                </TabsTrigger>
-                <TabsTrigger value="departments" className="flex items-center space-x-2">
-                  <Building className="h-4 w-4" />
-                  <span>Departamentos</span>
-                </TabsTrigger>
-              </>
-            )}
-          </TabsList>
+          <div className="sticky top-0 z-10 bg-gray-50 -mx-4 sm:mx-0 pb-4">
+            <div className="px-4 sm:px-0">
+              <NavigationTabs user={user} />
+            </div>
+          </div>
 
           {/* Requests Tab */}
           <TabsContent value="requests" className="space-y-4">

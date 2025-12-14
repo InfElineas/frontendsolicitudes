@@ -30,6 +30,12 @@ const fmtDate = (d) => {
   try { return d ? new Date(d).toLocaleDateString() : '-'; } catch { return '-'; }
 };
 
+const truncateText = (value, max = 20) => {
+  if (!value) return '';
+  const str = String(value);
+  return str.length > max ? `${str.slice(0, max)}…` : str;
+};
+
 const RequestCard = ({
   request,
   user,
@@ -82,12 +88,17 @@ const RequestCard = ({
     requester_id,
   } = request || {};
 
+  const truncatedTitle = truncateText(title);
+  const truncatedDescription = truncateText(description);
+
   return (
     <Card className="shadow-sm border border-gray-100">
       <CardHeader>
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2 min-w-0">
-            <CardTitle className="text-lg leading-snug break-words">{title}</CardTitle>
+            <CardTitle className="text-lg leading-snug break-words" title={title}>
+              {truncatedTitle}
+            </CardTitle>
             <CardDescription className="space-y-1">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-700">
                 <span className="font-medium text-gray-900">{requester_name || '-'}</span>
@@ -128,7 +139,11 @@ const RequestCard = ({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {description && <p className="text-gray-700 leading-relaxed">{description}</p>}
+        {description && (
+          <p className="text-gray-700 leading-relaxed" title={description}>
+            {truncatedDescription}
+          </p>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-600">
           <div className="space-y-1">
