@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { notifyAuthExpired } from '@/utils/session';
-import { deriveHistory } from './historyUtils';
+import { deriveHistory as buildHistoryTimeline } from './historyUtils';
 
 /* -------------------- BASE URL robusto (Vite/CRA + proxy Netlify) -------------------- */
 const isLocal =
@@ -141,7 +141,7 @@ export default function RequestDetailDialog({ open, onOpenChange, requestId }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
   const abortRef = useRef(null);
-  const historyRows = useMemo(() => deriveHistory(data), [data]);
+  const historyRows = useMemo(() => buildHistoryTimeline(data), [data]);
 
   useEffect(() => {
     if (!open || !requestId) return;
