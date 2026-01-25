@@ -1,6 +1,6 @@
 // src/components/layout/HeaderBar.jsx
 import React, { useState, useEffect } from "react";
-import { LogOut, FileText } from "lucide-react";
+import { LogOut, FileText, Moon, Sun } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 
@@ -18,10 +18,30 @@ import { Label } from "../ui/label";
 
 function HeaderBar({ user, onLogout, onUpdateProfile }) {
   const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState("light");
   const [form, setForm] = useState({
     full_name: "",
     password: "",
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("theme");
+    if (stored === "light" || stored === "dark") {
+      setTheme(stored);
+      return;
+    }
+    const prefersDark =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setTheme(prefersDark ? "dark" : "light");
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     if (user) {
@@ -33,6 +53,8 @@ function HeaderBar({ user, onLogout, onUpdateProfile }) {
   }, [user]);
 
   const handleChange = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const toggleTheme = () =>
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -63,6 +85,19 @@ function HeaderBar({ user, onLogout, onUpdateProfile }) {
 
           {/* Usuario + Logout */}
           <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleTheme}
+              aria-label="Cambiar tema"
+              className="theme-toggle"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </Button>
             {/* Perfil */}
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
