@@ -139,6 +139,23 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const stored = localStorage.getItem("theme");
+    if (stored === "light" || stored === "dark") {
+      document.documentElement.setAttribute("data-theme", stored);
+      return;
+    }
+    const prefersDark =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.setAttribute(
+      "data-theme",
+      prefersDark ? "dark" : "light",
+    );
+  }, []);
+
   // pestaña activa (persistente)
   const [activeTab, setActiveTab] = useState(
     () => localStorage.getItem("activeTab") || "requests",
@@ -426,24 +443,28 @@ function App() {
     setAuthChecked(true);
   };
 
+  const buildRequestParams = () => {
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("page_size", String(pageSize));
+    if (filters.sort) params.set("sort", filters.sort);
+    if (filters.q?.trim()) params.set("q", filters.q.trim());
+    if (filters.status !== "all") params.set("status", filters.status);
+    if (filters.department !== "all")
+      params.set("department", filters.department);
+    if (filters.type !== "all") params.set("type", filters.type);
+    if (filters.level !== "all") params.set("level", Number(filters.level));
+    if (filters.channel !== "all") params.set("channel", filters.channel);
+    if (filters.requester_id !== "all")
+      params.set("requester_id", filters.requester_id);
+    if (filters.assigned_to !== "all")
+      params.set("assigned_to", filters.assigned_to);
+    return params;
+  };
+
   const fetchRequests = async () => {
     try {
-      const params = new URLSearchParams();
-      params.set("page", page);
-      params.set("page_size", pageSize);
-      if (filters.sort) params.set("sort", filters.sort);
-      if (filters.q?.trim()) params.set("q", filters.q.trim());
-      if (filters.status !== "all") params.set("status", filters.status);
-      if (filters.department !== "all")
-        params.set("department", filters.department);
-      if (filters.type !== "all") params.set("type", filters.type);
-      if (filters.level !== "all") params.set("level", Number(filters.level));
-      if (filters.channel !== "all") params.set("channel", filters.channel);
-      if (filters.requester_id !== "all")
-        params.set("requester_id", filters.requester_id);
-      if (filters.assigned_to !== "all")
-        params.set("assigned_to", filters.assigned_to);
-
+      const params = buildRequestParams();
       const { data } = await api.get(`/requests?${params.toString()}`);
       setRequests(data.items || []);
       setTotal(data.total || 0);
@@ -1075,7 +1096,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 theme-root">
       {/* Header */}
       <HeaderBar
         user={user}
