@@ -62,6 +62,7 @@ import {
   CardHeader,
   CardTitle,
 } from "./components/ui/card";
+import { ThemeToggle } from "./components/ui/theme-toggle";
 
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.css";
@@ -824,30 +825,30 @@ function App() {
   const getStatusColor = (status) => {
     switch (status) {
       case "Pendiente":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200";
       case "En progreso":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200";
       case "En revisión":
-        return "bg-purple-100 text-purple-800";
+        return "bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-200";
       case "Finalizada":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 dark:bg-emerald-500/20 dark:text-emerald-200";
       case "Rechazada":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-slate-700/40 dark:text-slate-200";
     }
   };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
       case "Alta":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200";
       case "Media":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200";
       case "Baja":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 dark:bg-emerald-500/20 dark:text-emerald-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-slate-700/40 dark:text-slate-200";
     }
   };
 
@@ -862,27 +863,32 @@ function App() {
      =========================== */
   if (!authChecked) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="text-sm text-gray-600">Validando sesión…</div>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center px-4">
+        <div className="text-sm text-gray-600 dark:text-slate-300">
+          Validando sesión…
+        </div>
       </div>
     );
   }
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-slate-100 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
+        <div className="absolute right-4 top-4">
+          <ThemeToggle />
+        </div>
         <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <Card className="lg:col-span-2 bg-white/70 backdrop-blur shadow-sm border border-indigo-50">
+          <Card className="lg:col-span-2 bg-white/70 dark:bg-slate-900/80 backdrop-blur shadow-sm border border-indigo-50 dark:border-slate-800">
             <CardHeader className="space-y-2">
-              <CardTitle className="text-2xl font-bold text-gray-900">
+              <CardTitle className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                 Sistema de Solicitudes
               </CardTitle>
-              <CardDescription className="text-sm text-gray-700">
+              <CardDescription className="text-sm text-gray-700 dark:text-slate-300">
                 Gestiona, asigna y da seguimiento a las solicitudes con una
                 interfaz optimizada para cualquier dispositivo.
               </CardDescription>
             </CardHeader>
-            <CardContent className="text-sm text-gray-600 space-y-2">
+            <CardContent className="text-sm text-gray-600 dark:text-slate-300 space-y-2">
               <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-green-500" /> Sesión
                 segura y control de tiempo de inactividad.
@@ -898,12 +904,12 @@ function App() {
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-3 shadow-sm">
+          <Card className="lg:col-span-3 shadow-sm bg-white/90 dark:bg-slate-900/90 border border-transparent dark:border-slate-800">
             <CardHeader className="text-center space-y-1">
-              <CardTitle className="text-2xl font-bold text-gray-900">
+              <CardTitle className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                 Inicia sesión
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="dark:text-slate-300">
                 Accede con tus credenciales corporativas.
               </CardDescription>
             </CardHeader>
@@ -937,11 +943,11 @@ function App() {
                   {loading ? "Iniciando sesión..." : "Iniciar sesión"}
                 </Button>
               </form>
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg text-left">
-                <p className="text-xs font-normal text-gray-700 mb-1">
+              <div className="mt-6 p-4 bg-gray-50 dark:bg-slate-800/60 rounded-lg text-left border border-transparent dark:border-slate-700">
+                <p className="text-xs font-normal text-gray-700 dark:text-slate-200 mb-1">
                   Plataforma desarrollada por el equipo de Soporte.
                 </p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-600 dark:text-slate-300">
                   Si tu sesión expira, volverás automáticamente a esta pantalla
                   para mantener la seguridad.
                 </p>
@@ -1075,7 +1081,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Header */}
       <HeaderBar
         user={user}
@@ -1086,7 +1092,7 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="sticky top-0 z-10 bg-gray-50 -mx-4 sm:mx-0 pb-4">
+          <div className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-950 -mx-4 sm:mx-0 pb-4">
             <div className="px-4 sm:px-0">
               <NavigationTabs user={user} />
             </div>
@@ -1148,7 +1154,7 @@ function App() {
           {(user?.role === "support" || user?.role === "admin") && (
             <TabsContent value="users" className="space-y-4">
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
                   Gestión de Usuarios
                 </h2>
                 <Dialog open={userDialog} onOpenChange={setUserDialog}>

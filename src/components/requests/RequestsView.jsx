@@ -1,6 +1,6 @@
 // RequestsView.jsx (parcheado — reemplaza el contenido del componente)
 import React, { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { LayoutGrid, List, Plus } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -50,6 +50,7 @@ const RequestsView = ({
   fetchRequests,
 }) => {
   const [viewDialogFor, setViewDialogFor] = useState(null);
+  const [viewMode, setViewMode] = useState("grid");
 
   const [editDialogFor, setEditDialogFor] = useState(null);
   const [editData, setEditData] = useState({
@@ -217,25 +218,58 @@ const RequestsView = ({
   return (
     <div className="space-y-6">
       {/* Header y botón */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-2xl font-bold text-gray-900">
-          Solicitudes de Automatización
-        </h2>
-        <Dialog open={requestDialog} onOpenChange={setRequestDialog}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              <span>Nueva Solicitud</span>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-bold text-gray-900">
+            Solicitudes de Automatización
+          </h2>
+          <p className="text-sm text-gray-600">
+            Gestiona tus solicitudes con vistas en lista o cuadrícula.
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <div
+            className="inline-flex rounded-full border border-slate-200 bg-white shadow-sm p-1 dark:border-slate-800 dark:bg-slate-900"
+            role="group"
+            aria-label="Selector de vista"
+          >
+            <Button
+              type="button"
+              variant={viewMode === "list" ? "secondary" : "ghost"}
+              className="rounded-full px-3 py-1.5 text-sm"
+              onClick={() => setViewMode("list")}
+              aria-pressed={viewMode === "list"}
+            >
+              <List className="h-4 w-4 mr-2" />
+              Lista
             </Button>
-          </DialogTrigger>
-          <CreateRequestDialog
-            user={user}
-            users={users}
-            newRequest={newRequest}
-            setNewRequest={setNewRequest}
-            createRequest={createRequest}
-          />
-        </Dialog>
+            <Button
+              type="button"
+              variant={viewMode === "grid" ? "secondary" : "ghost"}
+              className="rounded-full px-3 py-1.5 text-sm"
+              onClick={() => setViewMode("grid")}
+              aria-pressed={viewMode === "grid"}
+            >
+              <LayoutGrid className="h-4 w-4 mr-2" />
+              Cuadrícula
+            </Button>
+          </div>
+          <Dialog open={requestDialog} onOpenChange={setRequestDialog}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                <span>Nueva Solicitud</span>
+              </Button>
+            </DialogTrigger>
+            <CreateRequestDialog
+              user={user}
+              users={users}
+              newRequest={newRequest}
+              setNewRequest={setNewRequest}
+              createRequest={createRequest}
+            />
+          </Dialog>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -260,9 +294,17 @@ const RequestsView = ({
       />
 
       {/* Lista de solicitudes (usamos localRequests ahora) */}
-      <div className="grid gap-4 grid-cols-1 xl:grid-cols-2">
+      <div
+        className={
+          viewMode === "grid"
+            ? "grid gap-4 grid-cols-1 xl:grid-cols-2"
+            : "grid gap-3 grid-cols-1"
+        }
+      >
         {localRequests.length === 0 ? (
-          <div className="text-center text-gray-500 py-12 bg-white rounded-lg border xl:col-span-2">
+          <div
+            className={`text-center text-gray-500 py-12 bg-white rounded-lg border ${viewMode === "grid" ? "xl:col-span-2" : ""}`}
+          >
             No hay solicitudes que coincidan con el filtro.
           </div>
         ) : (
@@ -289,6 +331,9 @@ const RequestsView = ({
               setEditData={setEditData}
               onView={(id) => setViewDialogFor(id)}
               onEdit={(id, data) => openEdit(id, data)}
+              className={
+                viewMode === "list" ? "border-slate-200 dark:border-slate-800" : ""
+              }
             />
           ))
         )}

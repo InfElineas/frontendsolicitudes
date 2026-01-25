@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { LogOut, FileText } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
+import { ThemeToggle } from "../ui/theme-toggle";
 
 import {
   Dialog,
@@ -50,19 +51,20 @@ function HeaderBar({ user, onLogout, onUpdateProfile }) {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b">
+    <header className="bg-white/80 dark:bg-slate-950/80 shadow-sm border-b border-slate-200/60 dark:border-slate-800 backdrop-blur">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 flex-wrap">
           {/* Logo y título */}
           <div className="flex items-center space-x-2">
-            <FileText className="h-8 w-8 text-indigo-600" />
-            <h1 className="text-xl font-bold text-gray-900 whitespace-nowrap">
+            <FileText className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+            <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100 whitespace-nowrap">
               Sistema de Solicitudes
             </h1>
           </div>
 
           {/* Usuario + Logout */}
           <div className="flex items-center space-x-4">
+            <ThemeToggle />
             {/* Perfil */}
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
@@ -92,12 +94,12 @@ function HeaderBar({ user, onLogout, onUpdateProfile }) {
                   </div>
 
                   <div className="flex flex-col text-left truncate">
-                    <span className="font-medium truncate">
+                    <span className="font-medium truncate text-gray-900 dark:text-slate-100">
                       {user?.full_name}
                     </span>
                     <Badge
                       variant="secondary"
-                      className="text-xs flex justify-center capitalize max-sm:hidden"
+                      className="text-xs flex justify-center capitalize max-sm:hidden dark:bg-slate-800 dark:text-slate-100"
                     >
                       {user?.role === "admin"
                         ? "Administrador"

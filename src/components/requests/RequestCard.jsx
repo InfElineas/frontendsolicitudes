@@ -17,35 +17,36 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 /* -------- helpers de UI -------- */
 const getStatusColor = (status) => {
   switch (status) {
     case "Pendiente":
-      return "bg-yellow-100 text-yellow-800";
+      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200";
     case "En progreso":
-      return "bg-blue-100 text-blue-800";
+      return "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200";
     case "En revisión":
-      return "bg-purple-100 text-purple-800";
+      return "bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-200";
     case "Finalizada":
-      return "bg-green-100 text-green-800";
+      return "bg-green-100 text-green-800 dark:bg-emerald-500/20 dark:text-emerald-200";
     case "Rechazada":
-      return "bg-red-100 text-red-800";
+      return "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-800 dark:bg-slate-700/40 dark:text-slate-200";
   }
 };
 
 const getPriorityColor = (priority) => {
   switch (priority) {
     case "Alta":
-      return "bg-red-100 text-red-800";
+      return "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200";
     case "Media":
-      return "bg-yellow-100 text-yellow-800";
+      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200";
     case "Baja":
-      return "bg-green-100 text-green-800";
+      return "bg-green-100 text-green-800 dark:bg-emerald-500/20 dark:text-emerald-200";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-800 dark:bg-slate-700/40 dark:text-slate-200";
   }
 };
 
@@ -78,6 +79,7 @@ const RequestCard = ({
   setEditData,
   onView,
   onEdit,
+  className,
 }) => {
   const canSendReview = () => {
     if (!user) return false;
@@ -111,7 +113,7 @@ const RequestCard = ({
   } = request || {};
 
   return (
-    <Card className="shadow-sm border border-gray-100">
+    <Card className={cn("shadow-sm border border-gray-100", className)}>
       <CardHeader>
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2 min-w-0">

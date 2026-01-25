@@ -65,19 +65,26 @@ api.interceptors.request.use((config) => {
 /* -------------------- Helpers de UI -------------------- */
 const colorStatus = (s) =>
   ({
-    Pendiente: "bg-yellow-100 text-yellow-800",
-    "En progreso": "bg-blue-100 text-blue-800",
-    "En revisión": "bg-purple-100 text-purple-800",
-    Finalizada: "bg-green-100 text-green-800",
-    Rechazada: "bg-red-100 text-red-800",
-  })[s] || "bg-gray-100 text-gray-800";
+    Pendiente:
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200",
+    "En progreso":
+      "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
+    "En revisión":
+      "bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-200",
+    Finalizada:
+      "bg-green-100 text-green-800 dark:bg-emerald-500/20 dark:text-emerald-200",
+    Rechazada:
+      "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200",
+  })[s] || "bg-gray-100 text-gray-800 dark:bg-slate-700/40 dark:text-slate-200";
 
 const colorPri = (p) =>
   ({
-    Alta: "bg-red-100 text-red-800",
-    Media: "bg-yellow-100 text-yellow-800",
-    Baja: "bg-green-100 text-green-800",
-  })[p] || "bg-gray-100 text-gray-800";
+    Alta: "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200",
+    Media:
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200",
+    Baja:
+      "bg-green-100 text-green-800 dark:bg-emerald-500/20 dark:text-emerald-200",
+  })[p] || "bg-gray-100 text-gray-800 dark:bg-slate-700/40 dark:text-slate-200";
 
 const fmt = (d) => {
   try {
