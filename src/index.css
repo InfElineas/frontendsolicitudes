@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family:
+    source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+@layer base {
+  :root {
+    --background: 225 33% 97%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 243 75% 59%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 220 20% 95%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 220 20% 96%;
+    --muted-foreground: 215 16% 40%;
+    --accent: 230 25% 94%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 20% 90%;
+    --input: 220 20% 92%;
+    --ring: 243 75% 59%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 32% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 32% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 32% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 24% 20%;
+    --input: 217 24% 20%;
+    --ring: 213 94% 68%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .dark .bg-white {
+    @apply bg-slate-900;
+  }
+  .dark .bg-white\/70 {
+    @apply bg-slate-900/70;
+  }
+  .dark .bg-white\/80 {
+    @apply bg-slate-900/80;
+  }
+  .dark .bg-gray-50 {
+    @apply bg-slate-950;
+  }
+  .dark .bg-gray-100 {
+    @apply bg-slate-800;
+  }
+  .dark .text-gray-900 {
+    @apply text-slate-100;
+  }
+  .dark .text-gray-800 {
+    @apply text-slate-200;
+  }
+  .dark .text-gray-700 {
+    @apply text-slate-300;
+  }
+  .dark .text-gray-600 {
+    @apply text-slate-300;
+  }
+  .dark .text-gray-500 {
+    @apply text-slate-400;
+  }
+  .dark .text-gray-400 {
+    @apply text-slate-500;
+  }
+  .dark .border-gray-100 {
+    @apply border-slate-800;
+  }
+  .dark .border-gray-200 {
+    @apply border-slate-800;
+  }
+  .dark .border-indigo-50 {
+    @apply border-slate-800;
+  }
+  .dark .shadow-sm {
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+  }
+}
