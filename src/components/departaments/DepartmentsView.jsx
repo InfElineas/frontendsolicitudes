@@ -34,7 +34,7 @@ function DepartmentsView({ departments, users }) {
             return (
               <Card
                 key={dept.id}
-                className="w-full max-w-sm sm:max-w-none mx-auto"
+                className="w-full max-w-[20rem] sm:max-w-none mx-auto"
               >
                 <CardHeader>
                   <CardTitle className="text-lg">

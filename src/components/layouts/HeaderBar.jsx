@@ -103,21 +103,7 @@ function HeaderBar({ user, onLogout, onUpdateProfile, title, onOpenMobileNav }) 
                     .toUpperCase()}
                 </div>
 
-                <div className="flex flex-col text-left truncate">
-                  <span className="font-medium truncate text-gray-900 dark:text-slate-100">
-                    {user?.full_name}
-                  </span>
-                  <Badge
-                    variant="secondary"
-                    className="text-xs flex justify-center capitalize max-sm:hidden dark:bg-slate-800 dark:text-slate-100"
-                  >
-                    {user?.role === "admin"
-                      ? "Administrador"
-                      : user?.role === "support"
-                        ? "Soporte"
-                        : "Empleado"}
-                  </Badge>
-                </div>
+                <span className="sr-only">{user?.full_name || "Perfil"}</span>
               </button>
             </DialogTrigger>
 

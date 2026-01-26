@@ -1215,8 +1215,8 @@ function App() {
         />
 
         {/* Main Content */}
-        <main className="flex-1 px-4 py-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
+        <main className="flex-1 px-4 py-6 lg:px-6">
+          <div className="mx-auto max-w-none">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               {/* Requests Tab */}
               <TabsContent value="requests" className="space-y-4">
