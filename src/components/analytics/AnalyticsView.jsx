@@ -68,12 +68,12 @@ function AnalyticsView({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
           Análisis y Métricas
         </h2>
-        <div className="flex flex-wrap items-center gap-3 max-md:w-full">
+        <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 max-md:w-full">
           <Select value={analyticsPeriod} onValueChange={setAnalyticsPeriod}>
-            <SelectTrigger className="w-48 max-md:w-full">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -88,7 +88,7 @@ function AnalyticsView({
             value={analyticsFilters?.technician || "all"}
             onValueChange={(value) => handleFilterChange("technician", value)}
           >
-            <SelectTrigger className="w-48 max-md:w-full">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Técnico" />
             </SelectTrigger>
             <SelectContent>
