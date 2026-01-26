@@ -17,9 +17,9 @@ const Sidebar = ({
 }) => {
   return (
     <aside
-      className={`flex flex-col border-r border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur ${
+      className={`flex flex-col border-r border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur sticky top-0 h-screen overflow-y-auto ${
         isMobile
-          ? "w-full h-full"
+          ? "w-full"
           : collapsed
             ? "w-20"
             : "w-64"
@@ -73,8 +73,8 @@ const Sidebar = ({
                 }}
                 className={`group flex items-center ${collapsed ? "justify-center" : ""} gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                   isActive
-                    ? "bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900/60 dark:hover:text-slate-100"
+                    ? "bg-slate-900 text-white shadow-sm dark:bg-slate-200 dark:text-slate-900"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-900/60 dark:hover:text-slate-100"
                 }`}
               >
                 <Icon className="h-4 w-4" />

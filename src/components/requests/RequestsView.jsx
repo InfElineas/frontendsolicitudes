@@ -227,7 +227,7 @@ const RequestsView = ({
             Prioriza y da seguimiento con una vista enfocada en acciones.
           </p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <div className="flex flex-wrap items-center gap-3 justify-between sm:justify-end">
           <div
             className="inline-flex rounded-full border border-slate-200 bg-white shadow-sm p-1 dark:border-slate-800 dark:bg-slate-900"
             role="group"
@@ -264,7 +264,7 @@ const RequestsView = ({
           </div>
           <Dialog open={requestDialog} onOpenChange={setRequestDialog}>
             <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
+              <Button className="flex items-center gap-2 h-9 px-3 text-sm">
                 <Plus className="h-4 w-4" />
                 <span>Nueva Solicitud</span>
               </Button>

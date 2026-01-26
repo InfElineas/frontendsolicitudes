@@ -112,6 +112,11 @@ const RequestCard = ({
     feedback,
   } = request || {};
 
+  const descriptionText =
+    description && description.length > 160
+      ? `${description.slice(0, 160)}…`
+      : description;
+
   return (
     <Card
       className={cn(
@@ -165,9 +170,9 @@ const RequestCard = ({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {description && (
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            {description}
+        {descriptionText && (
+          <p className="text-sm text-slate-600 dark:text-slate-300 min-h-[2.5rem]">
+            {descriptionText}
           </p>
         )}
 
@@ -199,7 +204,7 @@ const RequestCard = ({
 
         <div className="flex flex-wrap gap-2 justify-start">
           {/* Admin: Clasificar / Asignar */}
-          {user?.role === "admin" && status !== "En progreso" && (
+          {user?.role === "admin" && status === "Pendiente" && (
             <>
               <Button
                 size="sm"
