@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { notifyAuthExpired } from "@/utils/session";
+import { getStoredToken, notifyAuthExpired } from "@/utils/session";
 import { deriveHistory as buildHistoryTimeline } from "./historyUtils";
 
 /* -------------------- BASE URL robusto (Vite/CRA + proxy Netlify) -------------------- */
@@ -47,11 +47,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const stored =
-    localStorage.getItem("access_token") ||
-    sessionStorage.getItem("access_token") ||
-    localStorage.getItem("token") ||
-    sessionStorage.getItem("token");
+  const stored = getStoredToken();
 
   if (stored) {
     const raw = stored.trim();
