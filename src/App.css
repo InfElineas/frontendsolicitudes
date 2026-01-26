@@ -20,12 +20,7 @@ body {
     sans-serif;
   margin: 0;
   padding: 0;
-  background: radial-gradient(
-      1200px circle at top left,
-      hsl(var(--primary) / 0.12),
-      transparent 60%
-    ),
-    hsl(var(--background));
+  background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   line-height: 1.6;
 }
