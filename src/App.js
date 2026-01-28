@@ -319,6 +319,13 @@ function App() {
     position: "Especialista",
     role: "employee",
   });
+  const [departmentUserDialog, setDepartmentUserDialog] = useState(false);
+  const [departmentUserForm, setDepartmentUserForm] = useState({
+    full_name: "",
+    email: "",
+    role: "employee",
+    status: "active",
+  });
 
   // departments
   const [departments, setDepartments] = useState(null);
@@ -716,6 +723,69 @@ function App() {
     }
   };
 
+  const createDepartmentUser = async (event) => {
+    event.preventDefault();
+    const trimmedName = departmentUserForm.full_name.trim();
+    const trimmedEmail = departmentUserForm.email.trim();
+    const allowedRoles = ["employee", "support"];
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!trimmedName) {
+      toast.error("El nombre es obligatorio");
+      return;
+    }
+
+    if (!emailPattern.test(trimmedEmail)) {
+      toast.error("El correo no es válido");
+      return;
+    }
+
+    if (!allowedRoles.includes(departmentUserForm.role)) {
+      toast.error("Selecciona un rol permitido");
+      return;
+    }
+
+    if (!departmentContext.departmentId && !departmentContext.departmentName) {
+      toast.error("No se pudo determinar el departamento del usuario");
+      return;
+    }
+
+    const payload = {
+      full_name: trimmedName,
+      email: trimmedEmail,
+      role: departmentUserForm.role,
+      is_active: departmentUserForm.status === "active",
+    };
+
+    if (departmentContext.departmentId) {
+      payload.department_id = departmentContext.departmentId;
+    }
+
+    if (departmentContext.departmentName) {
+      payload.department = departmentContext.departmentName;
+    }
+
+    try {
+      await api.post("/users", payload);
+      toast.success("Usuario creado exitosamente");
+      setDepartmentUserDialog(false);
+      setDepartmentUserForm({
+        full_name: "",
+        email: "",
+        role: "employee",
+        status: "active",
+      });
+      await fetchUsers();
+    } catch (error) {
+      console.error("Error creating department user:", error);
+      const message =
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        "Error al crear usuario";
+      toast.error(message);
+    }
+  };
+
   //Eliminar usuario(admin) -> SweetAlert confirm
   const deleteUser = async (userId) => {
     const result = await Swal.fire({
@@ -914,6 +984,111 @@ function App() {
     return { from, to };
   }, [page, pageSize, total]);
 
+  const normalizedRole = String(user?.role || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  const isDepartmentManager =
+    normalizedRole === "jefe_departamento" ||
+    normalizedRole === "department_manager";
+
+  const departmentContext = useMemo(() => {
+    const rawDepartment = user?.department ?? null;
+    const departmentId =
+      user?.department_id ??
+      (typeof rawDepartment === "object" ? rawDepartment?.id : null);
+    const departmentName =
+      typeof rawDepartment === "string"
+        ? rawDepartment
+        : rawDepartment?.name ?? user?.department_name ?? null;
+
+    return { departmentId, departmentName };
+  }, [user]);
+
+  // TODO: reemplazar por filtrado en backend cuando exista endpoint por departamento.
+  const departmentUsers = useMemo(() => {
+    const { departmentId, departmentName } = departmentContext;
+    if (!departmentId && !departmentName) return users;
+    return users.filter((candidate) => {
+      const candidateDepartmentId =
+        candidate?.department_id ??
+        (typeof candidate?.department === "object"
+          ? candidate?.department?.id
+          : null);
+      const candidateDepartmentName =
+        typeof candidate?.department === "string"
+          ? candidate.department
+          : candidate?.department?.name ?? candidate?.department_name ?? null;
+
+      if (departmentId) {
+        if (candidateDepartmentId) {
+          return String(candidateDepartmentId) === String(departmentId);
+        }
+        if (departmentName && candidateDepartmentName) {
+          return candidateDepartmentName === departmentName;
+        }
+        return false;
+      }
+
+      if (departmentName && candidateDepartmentName) {
+        return candidateDepartmentName === departmentName;
+      }
+
+      return false;
+    });
+  }, [departmentContext, users]);
+
+  const departmentStats = useMemo(() => {
+    const resolveActiveFlag = (candidate) => {
+      if (typeof candidate?.is_active === "boolean") return candidate.is_active;
+      if (typeof candidate?.active === "boolean") return candidate.active;
+      const statusValue = candidate?.status ?? candidate?.estado ?? null;
+      if (statusValue) {
+        const normalized = String(statusValue).toLowerCase();
+        if (["activo", "activa", "active", "enabled", "habilitado"].includes(normalized)) {
+          return true;
+        }
+        if (
+          ["inactivo", "inactive", "disabled", "deshabilitado"].includes(
+            normalized,
+          )
+        ) {
+          return false;
+        }
+      }
+      return null;
+    };
+
+    const now = Date.now();
+    let activeCount = 0;
+    let inactiveCount = 0;
+    let recentCount = 0;
+    let hasCreatedAt = false;
+
+    departmentUsers.forEach((candidate) => {
+      const activeFlag = resolveActiveFlag(candidate);
+      if (activeFlag === true) activeCount += 1;
+      if (activeFlag === false) inactiveCount += 1;
+
+      if (candidate?.created_at) {
+        hasCreatedAt = true;
+        const createdAtTime = new Date(candidate.created_at).getTime();
+        if (!Number.isNaN(createdAtTime)) {
+          const diffDays = (now - createdAtTime) / (1000 * 60 * 60 * 24);
+          if (diffDays <= 7) recentCount += 1;
+        }
+      }
+    });
+
+    return {
+      total: departmentUsers.length,
+      active: activeCount,
+      inactive: inactiveCount,
+      recent: recentCount,
+      hasCreatedAt,
+    };
+  }, [departmentUsers]);
+
   const navItems = useMemo(
     () => [
       {
@@ -938,7 +1113,10 @@ function App() {
         value: "users",
         label: "Usuarios",
         icon: Users,
-        show: user?.role === "support" || user?.role === "admin",
+        show:
+          user?.role === "support" ||
+          user?.role === "admin" ||
+          isDepartmentManager,
       },
       {
         value: "departments",
@@ -947,7 +1125,7 @@ function App() {
         show: user?.role === "support" || user?.role === "admin",
       },
     ],
-    [user],
+    [isDepartmentManager, user],
   );
 
   const activeTitle =
@@ -1270,7 +1448,7 @@ function App() {
                 </TabsContent>
               )}
 
-              {/* Users Tab (Admin only) */}
+              {/* Users Tab (Support/Admin) */}
               {(user?.role === "support" || user?.role === "admin") && (
                 <TabsContent value="users" className="space-y-4">
                   <div className="flex justify-between items-center">
@@ -1408,6 +1586,202 @@ function App() {
                   {/* Pasamos la nueva prop onEditUser */}
                   <UsersView
                     users={users}
+                    onDeleteUser={deleteUser}
+                    onEditUser={openEditUser}
+                  />
+                </TabsContent>
+              )}
+
+              {/* Users Tab (Department Manager) */}
+              {isDepartmentManager && (
+                <TabsContent value="users" className="space-y-4">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
+                        Usuarios del Departamento
+                      </h2>
+                      <p className="text-sm text-gray-500 dark:text-slate-300">
+                        Visualiza y administra usuarios de tu área.
+                      </p>
+                    </div>
+                    <Dialog
+                      open={departmentUserDialog}
+                      onOpenChange={setDepartmentUserDialog}
+                    >
+                      <DialogTrigger asChild>
+                        <Button className="flex items-center space-x-2">
+                          <UserPlus className="h-4 w-4" />
+                          <span>Crear usuario</span>
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Crear usuario del departamento</DialogTitle>
+                          <DialogDescription>
+                            Solo podrás crear usuarios para tu departamento.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form
+                          onSubmit={createDepartmentUser}
+                          className="space-y-4"
+                        >
+                          <div className="space-y-2">
+                            <Label htmlFor="dept_full_name">
+                              Nombre completo
+                            </Label>
+                            <Input
+                              id="dept_full_name"
+                              value={departmentUserForm.full_name}
+                              onChange={(event) =>
+                                setDepartmentUserForm({
+                                  ...departmentUserForm,
+                                  full_name: event.target.value,
+                                })
+                              }
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="dept_email">Correo</Label>
+                            <Input
+                              id="dept_email"
+                              type="email"
+                              value={departmentUserForm.email}
+                              onChange={(event) =>
+                                setDepartmentUserForm({
+                                  ...departmentUserForm,
+                                  email: event.target.value,
+                                })
+                              }
+                              required
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label>Rol</Label>
+                              <Select
+                                value={departmentUserForm.role}
+                                onValueChange={(value) =>
+                                  setDepartmentUserForm({
+                                    ...departmentUserForm,
+                                    role: value,
+                                  })
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="employee">
+                                    Empleado
+                                  </SelectItem>
+                                  <SelectItem value="support">
+                                    Soporte Técnico
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Estado</Label>
+                              <Select
+                                value={departmentUserForm.status}
+                                onValueChange={(value) =>
+                                  setDepartmentUserForm({
+                                    ...departmentUserForm,
+                                    status: value,
+                                  })
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="active">Activo</SelectItem>
+                                  <SelectItem value="inactive">
+                                    Inactivo
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Departamento</Label>
+                            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                              {departmentContext.departmentName ||
+                                departmentContext.departmentId ||
+                                "Sin información"}
+                            </div>
+                          </div>
+                          <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={
+                              !departmentContext.departmentId &&
+                              !departmentContext.departmentName
+                            }
+                          >
+                            Crear usuario
+                          </Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
+                  {(!departmentContext.departmentId &&
+                    !departmentContext.departmentName) && (
+                    <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+                      <AlertTriangle className="mt-0.5 h-4 w-4" />
+                      <div>
+                        <p className="font-medium">
+                          No se pudo determinar el departamento del usuario.
+                        </p>
+                        <p className="text-xs text-amber-900/80 dark:text-amber-100/80">
+                          Los datos se mostrarán sin filtro hasta que se defina
+                          el departamento.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Total usuarios</CardDescription>
+                        <CardTitle className="text-3xl">
+                          {departmentStats.total}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Activos</CardDescription>
+                        <CardTitle className="text-3xl">
+                          {departmentStats.active}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardDescription>Inactivos</CardDescription>
+                        <CardTitle className="text-3xl">
+                          {departmentStats.inactive}
+                        </CardTitle>
+                      </CardHeader>
+                    </Card>
+                    {departmentStats.hasCreatedAt && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardDescription>Nuevos (7 días)</CardDescription>
+                          <CardTitle className="text-3xl">
+                            {departmentStats.recent}
+                          </CardTitle>
+                        </CardHeader>
+                      </Card>
+                    )}
+                  </div>
+
+                  <UsersView
+                    users={departmentUsers}
                     onDeleteUser={deleteUser}
                     onEditUser={openEditUser}
                   />
