@@ -323,7 +323,7 @@ function App() {
   const [departmentUserForm, setDepartmentUserForm] = useState({
     full_name: "",
     email: "",
-    role: "operador",
+    role: "employee",
     status: "active",
   });
 
@@ -727,7 +727,7 @@ function App() {
     event.preventDefault();
     const trimmedName = departmentUserForm.full_name.trim();
     const trimmedEmail = departmentUserForm.email.trim();
-    const allowedRoles = ["operador", "viewer", "read_only"];
+    const allowedRoles = ["employee", "support"];
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!trimmedName) {
@@ -772,7 +772,7 @@ function App() {
       setDepartmentUserForm({
         full_name: "",
         email: "",
-        role: "operador",
+        role: "employee",
         status: "active",
       });
       await fetchUsers();
@@ -984,8 +984,13 @@ function App() {
     return { from, to };
   }, [page, pageSize, total]);
 
+  const normalizedRole = String(user?.role || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
   const isDepartmentManager =
-    user?.role === "jefe_departamento" || user?.role === "department_manager";
+    normalizedRole === "jefe_departamento" ||
+    normalizedRole === "department_manager";
 
   const departmentContext = useMemo(() => {
     const rawDepartment = user?.department ?? null;
@@ -1667,14 +1672,11 @@ function App() {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="operador">
-                                    Operador
+                                  <SelectItem value="employee">
+                                    Empleado
                                   </SelectItem>
-                                  <SelectItem value="viewer">
-                                    Viewer
-                                  </SelectItem>
-                                  <SelectItem value="read_only">
-                                    Solo lectura
+                                  <SelectItem value="support">
+                                    Soporte Técnico
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
