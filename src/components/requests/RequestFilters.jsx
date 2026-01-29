@@ -200,7 +200,7 @@ const RequestFilters = ({
         </div>
 
         {/* Asignado a */}
-        <div className="md:col-span-2">
+        <div className="md:col-span-1">
           <Label className="sr-only md:not-sr-only text-xs text-slate-500">
             Asignado a
           </Label>
@@ -226,7 +226,7 @@ const RequestFilters = ({
         </div>
 
         {/* Solicitado por */}
-        <div className="md:col-span-2">
+        <div className="md:col-span-1">
           <Label className="sr-only md:not-sr-only text-xs text-slate-500">
             Solicitado por
           </Label>
