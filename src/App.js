@@ -585,17 +585,23 @@ function App() {
         { headers: { "Content-Type": "application/json" } },
       );
       const accessToken = data?.access_token || data?.token;
+      const userFromLogin =
+        data?.user || data?.current_user || data?.profile || null;
       if (!accessToken) {
         toast.error("No se recibió un token válido.");
         setLoading(false);
         return;
       }
-      const meResponse = await api.get("/auth/me", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
       storeToken(accessToken);
       skipNextAuthCheck.current = true;
-      setUser(meResponse.data);
+      if (userFromLogin) {
+        setUser(userFromLogin);
+      } else {
+        const meResponse = await api.get("/auth/me", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        setUser(meResponse.data);
+      }
       setToken(accessToken);
       setAuthChecked(true);
       toast.success("¡Bienvenido!");
